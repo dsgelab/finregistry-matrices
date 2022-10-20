@@ -1,6 +1,8 @@
 # finregistry-matrices
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
+**All examples appear below are hypothetical and do not contain any real data**
+
 
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
@@ -29,7 +31,7 @@ OutputAge <em> T </em>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Zhiyu is aware that this info is technically implied by EVENT_AGE, but she was too lazy to add that for this version. She will update this in the near future :)*
 
-<em> `SampleList` </em> is a **headless** file listing the samples you would like to include in the output. It should have four columns in the following order: *FINREGISTRYID*, *DateOfBirth for this sample*, *Lowerbound of record inclusion date for this sample*, *Upperbound of record inclusion date for this sample*. All dates should be in a `yyyy-mm-dd` format. The output will only include records for the sample happening between `Lowerbound date` - `Upperbound date`, including the two ends of the window. This allows each sample to have different inclusion periods. See below for a demo of this file
+<em> `SampleList` </em> is a **headless** file listing the samples you would like to include in the output. It should have four columns in the following order: *FINREGISTRYID*, *DateOfBirth for this sample*, *Lowerbound of record inclusion date for this sample*, *Upperbound of record inclusion date for this sample*. All dates should be in a `yyyy-mm-dd` format. The output will only include records for the sample happening between `Lowerbound date` - `Upperbound date`, including the two ends of the window. This allows each sample to have different inclusion periods. See below for a demo of this file 
 <pre>
 FRXXXXXX1 2001-01-01  2005-01-01  2020-12-31
 FRXXXXXX2 1991-02-05  2000-01-01  2015-12-31
@@ -109,6 +111,13 @@ FRXXXXXX2 2004  2 1 0 0 4 1 26.14 0.00  26.73 ...
 ...
 </pre>
 Please choose accordingly what you would like to output. The output file will be tab-seperated. 
+
+Todo for Zhiyu (priority)
+- Make the program stop compaining about missing year (low)
+- Make the program take .gz longitudinal file as input (high)
+- Change event age encoding for endpoints that did not happen -- 0.0 cannot be separated from event at birth now, sue something else (high)
+- Harmonise the parameter files into one yaml (medium)
+- Let Zhiyu know!
 
 
 ## MakeDrugFile.c
