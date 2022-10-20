@@ -7,7 +7,6 @@
 #define nSampleBin 720
 #define MaxSamplePerBin 10000
 #define MaxFeature 5000
-#define MaxEventTimeLength 20000
 #define FeatureLen 100
 #define IDandTimeLen 15
 
@@ -17,9 +16,9 @@ char OutFile[10000];
 char SampleListFile[10000];
 char FeatureListFile[10000];
 const char *NoVal = "NA";
-int CutOffMode; // 0 -- age cutoff, 1 -- year cutoff, default age
 int ByYear; // 0 -- no, 1 -- yes, default no
-int EventMode; // 0 -- binary, 1 -- number of events, 2 -- list of event date, 3 -- list of event age, default binary
+int WithBinary;
+int WithNEvent;
 int WithAge; // 0 -- no, 1 -- yes, default no
 int SampleIncFlag, RecordIncFlag; // Inclusion flags
 
@@ -41,6 +40,7 @@ char *FeatureList[MaxFeature];
 int nFeature;
 long int nSample;
 
+
 static int StrComp(const void* Item1, const void* Item2) {
     return strcmp(*(char **)Item1, *(char **)Item2);
 }
@@ -60,7 +60,6 @@ time_t MakeTime(char Date[IDandTimeLen]) {
 
 
 double TimeDiffYear(time_t Time1, time_t Time2) {
-	// for function difftime(Time2, Time1), Time1 is the starting time
 	return(difftime(Time2, Time1)/(60*60*24*365.25));
 }
 
@@ -75,10 +74,10 @@ char *YearDiffToDate(time_t Time1, double YearDiff) {
 
 
 void ReadParam(const char *ParamFile) {
-	CutOffMode = 0;
 	ByYear = 0;
-	EventMode = 0;
 	WithAge = 0;
+	WithBinary = 0;
+	WithNEvent = 0;
 	FILE *Param;
 	char *tok; char *p;
 	Param = fopen(ParamFile, "r");
@@ -108,15 +107,6 @@ void ReadParam(const char *ParamFile) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(OutFile, tok);
 				}
-				else if (strcmp(tok, "Cutoff") == 0) {
-					tok = strtok_r(p, " \t\n", &p);
-					if (strcmp(tok, "Age") == 0 || strcmp(tok, "age") == 0)
-						CutOffMode = 0;
-					else if (strcmp(tok, "Date") == 0 || strcmp(tok, "year") == 0 || strcmp(tok, "Year") == 0)
-						CutOffMode = 1;
-					else
-						printf("Cutoff: Age/Year/Date. Using default age cutoff.\n");
-				}
 				else if (strcmp(tok, "ByYear") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
@@ -126,18 +116,23 @@ void ReadParam(const char *ParamFile) {
 					else
 						printf("ByYear: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "EventMode") == 0) {
+				else if (strcmp(tok, "OutputBinary") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
-					if (strcmp(tok, "Binary") == 0 || strcmp(tok, "binary") == 0)
-						EventMode = 0;
-					else if (strcmp(tok, "nEvent") == 0)
-						EventMode = 1;
-					else if (strcmp(tok, "EventDate") == 0)
-						EventMode = 2;
-					else if (strcmp(tok, "EventAge") == 0)
-						EventMode = 3;
+					if (strcmp(tok, "T") == 0)
+						WithBinary = 1;
+					else if (strcmp(tok, "F") == 0)
+						WithBinary = 0;
 					else
-						printf("EventMode: Binary/nEvent/EventDate/EventAge. Using default true.\n");
+						printf("OutputBinary: T/F. Using default false.\n");
+				}
+				else if (strcmp(tok, "OutputEventCount") == 0) {
+					tok = strtok_r(p, " \t\n", &p);
+					if (strcmp(tok, "T") == 0)
+						WithNEvent = 1;
+					else if (strcmp(tok, "F") == 0)
+						WithNEvent = 0;
+					else
+						printf("OutputEventCount: T/F. Using default false.\n");
 				}
 				else if (strcmp(tok, "OutputAge") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
@@ -152,8 +147,11 @@ void ReadParam(const char *ParamFile) {
 		}
 	}
 	fclose(Param);
-	printf("EventMode = %d, ByYear = %d, WithAge = %d\n", EventMode, ByYear, WithAge);
-	fflush(stdout);
+	if (WithAge + WithNEvent + WithBinary == 0) {
+		printf("No output required. Program terminates.\n");
+		fflush(stdout);
+		exit(0);
+	}
 } // read parameter file
 
 
@@ -182,21 +180,12 @@ void ReadList() {
 			tok = strtok_r(p, " ,\t\n", &p);
 			strcpy(tmpDOB, tok);
 			SampleList[bin][index].DateOfBirth = MakeTime(tmpDOB);
-			
-			if (CutOffMode) {
-				tok = strtok_r(p, " ,\t\n", &p);
-				strcpy(tmpDOB, tok);
-				SampleList[bin][index].lower = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
-				tok = strtok_r(p, " ,\t\n", &p);
-				strcpy(tmpDOB, tok);
-				SampleList[bin][index].upper = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
-			}
-			else {
-				tok = strtok_r(p, " ,\t\n", &p);
-				SampleList[bin][index].lower = atof(tok);
-				tok = strtok_r(p, " ,\t\n", &p);
-				SampleList[bin][index].upper = atof(tok);
-			}			
+			tok = strtok_r(p, " ,\t\n", &p);
+			strcpy(tmpDOB, tok);
+			SampleList[bin][index].lower = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
+			tok = strtok_r(p, " ,\t\n", &p);
+			strcpy(tmpDOB, tok);
+			SampleList[bin][index].upper = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
 			i += 1;
 		}
 	}
@@ -272,11 +261,7 @@ int Include(double tmpAge, double lower, double upper) {
 
 void ResetRecordInfo() {
 	int k;
-	if (!EventMode || EventMode == 1) 
-		memset(SampleFeature, 0, sizeof(int) * nFeature);
-	if (EventMode == 2 || EventMode == 3)
-		for (k = 0; k < nFeature; k++)
-			memset(SampleEventTime[k], '\0', sizeof(char) * MaxEventTimeLength);
+	memset(SampleFeature, 0, sizeof(int) * nFeature);
 	if (WithAge == 1)
 		memset(SampleOnsetAge, 0.0, sizeof(double) * nFeature);
 	RecordIncFlag = 0;
@@ -284,25 +269,9 @@ void ResetRecordInfo() {
 
 
 void UpdateRecordInfo(int iFeature, double tmpAge, time_t SampleDOB) {
-	if (!EventMode || EventMode == 1) {
-		if ( (WithAge == 1) && (SampleFeature[iFeature] == 0) )
-			SampleOnsetAge[iFeature] = tmpAge;
-		SampleFeature[iFeature] += 1;
-	}
-	else if (EventMode == 2) {
-		if (WithAge &&  SampleEventTime[iFeature][0] == '\0')
-			SampleOnsetAge[iFeature] = tmpAge;
-		char EventTime[IDandTimeLen];
-		sprintf(EventTime, "%s;", YearDiffToDate(SampleDOB, tmpAge));
-		strcat(SampleEventTime[iFeature], EventTime);
-	}
-	else if (EventMode == 3) {
-		if ( (WithAge == 1) &&  SampleEventTime[iFeature][0] == '\0')
-			SampleOnsetAge[iFeature] = tmpAge;
-		char EventTime[IDandTimeLen];
-		sprintf(EventTime, "%0.4f;", tmpAge);
-		strcat(SampleEventTime[iFeature], EventTime);
-	}
+	if ( (WithAge == 1) && (SampleFeature[iFeature] == 0) )
+		SampleOnsetAge[iFeature] = tmpAge;
+	SampleFeature[iFeature] += 1;
 	RecordIncFlag = 1;
 }
 
@@ -317,35 +286,38 @@ void WriteOutput(char SampleID[IDandTimeLen], int SampleYear) {
 	else 
 		fprintf(OutPut, "%s\t", SampleID);
 
-	if (!EventMode || EventMode == 1) {
-		if (!EventMode)
+	if (WithBinary + WithNEvent == 1) {
+		if ((WithBinary == 1) && (WithNEvent == 0)) {
 			for (k = 0; k < nFeature; k++) 
 				SampleFeature[k] = (SampleFeature[k] ? 1 : 0);
+		}
 		for (k = 0; k < nFeature-1; k++) 
 			fprintf(OutPut, "%d\t", SampleFeature[k]);
 		if (WithAge == 1) {
 			fprintf(OutPut, "%d\t", SampleFeature[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%lf\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%lf\n", SampleOnsetAge[nFeature-1]);
+				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
+			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
 		}
 		else
 			fprintf(OutPut, "%d\n", SampleFeature[nFeature-1]);
 	}
-	if (EventMode == 2 || EventMode == 3) {
-		for (k = 0; k < nFeature; k++) 
-			if (SampleEventTime[k][0] == '\0')
-				strcpy(SampleEventTime[k], NoVal);
+	else if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%s\t", SampleEventTime[k]);
+			fprintf(OutPut, "%d\t%d\t", SampleFeature[k], (SampleFeature[k] ? 1 : 0));
 		if (WithAge == 1) {
-			fprintf(OutPut, "%s\t", SampleEventTime[nFeature-1]);
-			for (k = 0; k < nFeature-1; k++)
-				fprintf(OutPut, "%lf\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%lf\n", SampleOnsetAge[nFeature-1]);
+			fprintf(OutPut, "%d\t%d\t", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] ? 1 : 0));
+			for (k = 0; k < nFeature-1; k++) 
+				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
+			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
 		}
 		else
-			fprintf(OutPut, "%s\n", SampleEventTime[nFeature-1]);
+			fprintf(OutPut, "%d\t%d\n", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] ? 1 : 0));
+	}
+	else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
+		for (k = 0; k < nFeature-1; k++) 
+			fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
+		fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
 	}
 	fclose(OutPut);
 }
@@ -367,17 +339,9 @@ int main(int argc, char const *argv[]) {
 	fflush(stdout);
 	ReadList();
 
-	if (!EventMode || EventMode == 1) {
-		SampleFeature = malloc(sizeof(int) * nFeature);
-		if (SampleFeature == NULL)
-			printf("SampleFeature memory allocation failed.\n");
-	}
-	if (EventMode == 2 || EventMode == 3)
-		for (k = 0; k < nFeature; k++) {
-			SampleEventTime[k] = malloc(sizeof(char) * MaxEventTimeLength);
-			if (SampleEventTime[k] == NULL)
-				printf("SampleEventTime[%d] memory allocation failed.\n", k);
-		}
+	SampleFeature = malloc(sizeof(int) * nFeature);
+	if (SampleFeature == NULL)
+		printf("SampleFeature memory allocation failed.\n");
 	if (WithAge == 1) {
 		SampleOnsetAge = malloc(sizeof(double) * nFeature);
 		if (SampleOnsetAge == NULL)
@@ -397,16 +361,47 @@ int main(int argc, char const *argv[]) {
 	else 
 		fprintf(OutPut, "FINREGISTRYID\t");
 
-	for (k = 0; k < nFeature-1; k++) 
-		fprintf(OutPut, "%s\t", FeatureList[k]);
-	if (WithAge == 1) {
-		fprintf(OutPut, "%s\t", FeatureList[nFeature-1]);
+	if ((WithBinary == 1) && (WithNEvent == 1)) {
+		for (k = 0; k < nFeature-1; k++) 
+			fprintf(OutPut, "%s_nEvent\t%s\t", FeatureList[k], FeatureList[k]);
+		if (WithAge == 1) {
+			fprintf(OutPut, "%s_nEvent\t%s\t", FeatureList[nFeature-1], FeatureList[nFeature-1]);
+			for (k = 0; k < nFeature-1; k++) 
+				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
+		}
+		else
+			fprintf(OutPut, "%s_nEvent\t%s\n", FeatureList[nFeature-1], FeatureList[nFeature-1]);
+	}
+	else if (WithNEvent == 1) {
+		for (k = 0; k < nFeature-1; k++) 
+			fprintf(OutPut, "%s_nEvent\t", FeatureList[k]);
+		if (WithAge == 1) {
+			fprintf(OutPut, "%s_nEvent\t", FeatureList[nFeature-1]);
+			for (k = 0; k < nFeature-1; k++) 
+				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
+		}
+		else
+			fprintf(OutPut, "%s_nEvent\n", FeatureList[nFeature-1]);
+	}
+	else if (WithBinary == 1) {
+		for (k = 0; k < nFeature-1; k++) 
+			fprintf(OutPut, "%s\t", FeatureList[k]);
+		if (WithAge == 1) {
+			fprintf(OutPut, "%s\t", FeatureList[nFeature-1]);
+			for (k = 0; k < nFeature-1; k++) 
+				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
+		}
+		else
+			fprintf(OutPut, "%s\n", FeatureList[nFeature-1]);
+	}
+	else if (WithAge == 1) {
 		for (k = 0; k < nFeature-1; k++) 
 			fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
 		fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
 	}
-	else
-		fprintf(OutPut, "%s\n", FeatureList[nFeature-1]);
 	fclose(OutPut);
 
 	FILE *LongEndPt;
@@ -440,8 +435,8 @@ int main(int argc, char const *argv[]) {
 			printf("Missing EVENT_AGE column.\n");
 			exit(0);
 		}
-		if ( ((CutOffMode == 1) || (ByYear == 1)) && (nYear == -1) ) {
-			printf("Given year cutoff or requested output by year, but no EVENT_YEAR column.\n");
+		if ( (ByYear == 1) && (nYear == -1) ) {
+			printf("Requested output by year, but no EVENT_YEAR column.\n");
 			exit(0);
 		}
 		while (fgets(buffer, sizeof(buffer), LongEndPt) != NULL) {
@@ -458,6 +453,8 @@ int main(int argc, char const *argv[]) {
 					strcpy(tmpEndPt, tok);
 				i += 1;
 			}
+			// printf("%s, %d, %lf, %s; Sample %s (%lf-%lf), SampleIncFlag = %d, RecordIncFlag = %d\n", tmpID, tmpYear, tmpAge, tmpEndPt, SampleID, SampleLower, SampleUpper, SampleIncFlag, RecordIncFlag);
+			// fflush(stdout);
 
 			if ( (strcmp(tmpID, SampleID) == 0) && (SampleIncFlag == 1) ) { // check if same as previous INCLUDED sample
 				if ((tmpYear != SampleYear) && (ByYear == 1) && (RecordIncFlag == 1)) { // if output by year and the event year is different from existing record
@@ -471,7 +468,6 @@ int main(int argc, char const *argv[]) {
 						UpdateRecordInfo(iFeature, tmpAge, SampleDOB); // update the existing record with current observation
 				} // do nothing if the event time is out of the window
 			}
-
 			else if (strcmp(tmpID, SampleID) != 0) { // if the observation is for different sample
 				if ((RecordIncFlag == 1) && (SampleIncFlag == 1)) {
 					WriteOutput(SampleID, SampleYear); // output existing record if necessary
