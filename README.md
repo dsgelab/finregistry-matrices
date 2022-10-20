@@ -116,7 +116,7 @@ Please choose accordingly what you would like to output. The output file will be
 ## MakeDrugFile.c
 Creates wide matrix (sample x feature) for drug from detailed longitudinal file. Works similarly to the endpoint file generator above.
 
-**This is again just a working prototype. Zhiyu will also (_hopefully_) try to fix this soon. Please let her know if there are any problems.** 
+**This is again just a prototype which is very fresh. Zhiyu has not yet tested it on large scale input so might not even be very working lol. Zhiyu will also (_hopefully_) fix this soon. Please let her know if you find some of the many problems.** 
 
 To Compile, download the code run 
 <pre>gcc MakeDrugFile.c -o <em>Where/and/what/you/want/it/to/be</em> -lm</pre>
