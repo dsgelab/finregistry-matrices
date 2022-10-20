@@ -453,8 +453,6 @@ int main(int argc, char const *argv[]) {
 					strcpy(tmpEndPt, tok);
 				i += 1;
 			}
-			// printf("%s, %d, %lf, %s; Sample %s (%lf-%lf), SampleIncFlag = %d, RecordIncFlag = %d\n", tmpID, tmpYear, tmpAge, tmpEndPt, SampleID, SampleLower, SampleUpper, SampleIncFlag, RecordIncFlag);
-			// fflush(stdout);
 
 			if ( (strcmp(tmpID, SampleID) == 0) && (SampleIncFlag == 1) ) { // check if same as previous INCLUDED sample
 				if ((tmpYear != SampleYear) && (ByYear == 1) && (RecordIncFlag == 1)) { // if output by year and the event year is different from existing record
