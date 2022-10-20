@@ -115,7 +115,7 @@ Please choose accordingly what you would like to output. The output file will be
 Todo for Zhiyu (priority)
 - Make the program stop compaining about missing year (low)
 - Make the program take .gz longitudinal file as input (high)
-- Change event age encoding for endpoints that did not happen -- 0.0 cannot be separated from event at birth now, sue something else (high)
+- Change event age encoding for endpoints that did not happen -- 0.0 cannot be separated from event at birth now, use something else (high)
 - Harmonise the parameter files into one yaml (medium)
 - Let Zhiyu know!
 
