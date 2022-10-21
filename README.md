@@ -157,7 +157,7 @@ J01
 </pre>
 where only `A02BC02` is an ATC code of full length which will be match as **exact**. The other columns will be counting occurences of sample purchasing **any** drug whose code starts with the given items. ie. `J01CA08`, `J01CE02`, `J01EA01` ... all start with `J01` so will be counted in that column.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "probelm" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "problem" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
 
 Todo for Zhiyu (priority)
 - More testing and debugging on the code. She is sure that they are not robust up to the standard yet (high)
