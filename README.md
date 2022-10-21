@@ -3,6 +3,7 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 
 **All examples appear below are hypothetical and do not contain any real data**
 
+*2022-10-21 changed encoding of onset age for missing events to -9.0 (used to be 0.0)*
 
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
