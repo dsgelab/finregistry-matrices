@@ -15,7 +15,6 @@ char InLongFile[10000];
 char OutFile[10000];
 char SampleListFile[10000];
 char FeatureListFile[10000];
-const char *NoVal = "NA";
 int ByYear; // 0 -- no, 1 -- yes, default no
 int WithBinary;
 int WithNEvent;
@@ -289,35 +288,35 @@ void WriteOutput(char SampleID[IDandTimeLen], int SampleYear) {
 	if (WithBinary + WithNEvent == 1) {
 		if ((WithBinary == 1) && (WithNEvent == 0)) {
 			for (k = 0; k < nFeature; k++) 
-				SampleFeature[k] = (SampleFeature[k] ? 1 : 0);
+				SampleFeature[k] = (SampleFeature[k] > 0.0 ? 1 : 0);
 		}
 		for (k = 0; k < nFeature-1; k++) 
 			fprintf(OutPut, "%d\t", SampleFeature[k]);
 		if (WithAge == 1) {
 			fprintf(OutPut, "%d\t", SampleFeature[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 		}
 		else
 			fprintf(OutPut, "%d\n", SampleFeature[nFeature-1]);
 	}
 	else if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%d\t%d\t", SampleFeature[k], (SampleFeature[k] ? 1 : 0));
+			fprintf(OutPut, "%d\t%d\t", SampleFeature[k], (SampleFeature[k] > 0.0 ? 1 : 0));
 		if (WithAge == 1) {
-			fprintf(OutPut, "%d\t%d\t", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] ? 1 : 0));
+			fprintf(OutPut, "%d\t%d\t", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] > 0.0 ? 1 : 0));
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 		}
 		else
-			fprintf(OutPut, "%d\t%d\n", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] ? 1 : 0));
+			fprintf(OutPut, "%d\t%d\n", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] > 0.0 ? 1 : 0));
 	}
 	else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-		fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+			fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+		fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 	}
 	fclose(OutPut);
 }
@@ -453,6 +452,8 @@ int main(int argc, char const *argv[]) {
 					strcpy(tmpEndPt, tok);
 				i += 1;
 			}
+			// printf("%s, %d, %lf, %s; Sample %s (%lf-%lf), SampleIncFlag = %d, RecordIncFlag = %d\n", tmpID, tmpYear, tmpAge, tmpEndPt, SampleID, SampleLower, SampleUpper, SampleIncFlag, RecordIncFlag);
+			// fflush(stdout);
 
 			if ( (strcmp(tmpID, SampleID) == 0) && (SampleIncFlag == 1) ) { // check if same as previous INCLUDED sample
 				if ((tmpYear != SampleYear) && (ByYear == 1) && (RecordIncFlag == 1)) { // if output by year and the event year is different from existing record
