@@ -307,7 +307,7 @@ void WriteOutput(char SampleID[IDandTimeLen], int SampleYear) {
 	if (WithBinary + WithNEvent == 1) {
 		if ((WithBinary == 1) && (WithNEvent == 0)) {
 			for (k = 0; k < nFeature; k++) 
-				SampleFeature[k] = ( (SampleFeature[k] > 0.0) ? 1 : 0);
+				SampleFeature[k] = ((SampleFeature[k] > 0.0) ? 1 : 0);
 		}
 		for (k = 0; k < nFeature-1; k++) {
 			fprintf(OutPut, "%.2f\t", SampleFeature[k]);
@@ -315,29 +315,29 @@ void WriteOutput(char SampleID[IDandTimeLen], int SampleYear) {
 		if (WithAge == 1) {
 			fprintf(OutPut, "%.2f\t", SampleFeature[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 		}
 		else
 			fprintf(OutPut, "%.2f\n", SampleFeature[nFeature-1]);
 	}
 	else if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++)  {
-			fprintf(OutPut, "%.2f\t%.2f\t", SampleFeature[k], ( (SampleFeature[k] > 0.0) ? 1.0 : 0.0));
+			fprintf(OutPut, "%.2f\t%.2f\t", SampleFeature[k], ((SampleFeature[k] > 0.0) ? 1.0 : 0.0));
 		}
 		if (WithAge == 1) {
-			fprintf(OutPut, "%.2f\t%.2f\t", SampleFeature[nFeature-1], ( (SampleFeature[nFeature-1] > 0.0) ? 1.0 : 0.0));
+			fprintf(OutPut, "%.2f\t%.2f\t", SampleFeature[nFeature-1], ((SampleFeature[nFeature-1] > 0.0) ? 1.0 : 0.0));
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-			fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 		}
 		else
 			fprintf(OutPut, "%.2f\t%.2f\n", SampleFeature[nFeature-1], ( (SampleFeature[nFeature-1] > 0.0) ? 1.0 : 0.0));
 	}
 	else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%.2f\t", SampleOnsetAge[k]);
-		fprintf(OutPut, "%.2f\n", SampleOnsetAge[nFeature-1]);
+			fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
+		fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
 	}
 	fclose(OutPut);
 }
