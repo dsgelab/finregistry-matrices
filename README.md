@@ -163,7 +163,6 @@ Todo for Zhiyu (priority)
 - More testing and debugging on the code. She is sure that they are not robust up to the standard yet (high)
 - Make the program stop complaining about missing year (low)
 - Make the program take .gz longitudinal file as input (high)
-- Change event age encoding for endpoints that did not happen -- 0.0 cannot be separated from event at birth now, use something else (high)
 - Harmonise the parameter files into one yaml (medium)
 - Fix the drug list with different level of ATC code thing (medium)
 - Let Zhiyu know!
