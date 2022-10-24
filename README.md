@@ -1,3 +1,4 @@
+<a id='top'></a>
 # finregistry-matrices
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
@@ -5,6 +6,16 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 
 *2022-10-21 changed encoding of onset age for missing events to -9.0 (used to be 0.0)*
 
+## Contents
+
+- [Creating matrices from endpoints](#endpt)
+- [Creating matrices from drug purchases](#drug)
+- [Creating matrices from other data sources](#other)
+- [To do items](#todo)
+
+[Go to top of page](#top)
+
+<a id='endpt'></a>
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
 
@@ -113,7 +124,9 @@ FRXXXXXX2 2004  2 1 0 0 4 1 26.14 0.00  26.73 ...
 </pre>
 Please choose accordingly what you would like to output. The output file will be tab-seperated. 
 
+[Go to top of page](#top)
 
+<a id='drug'></a>
 ## MakeDrugFile.c
 Creates wide matrix (sample x feature) for drug from detailed longitudinal file. Works similarly to the endpoint file generator above.
 
@@ -159,6 +172,27 @@ where only `A02BC02` is an ATC code of full length which will be match as **exac
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "problem" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
 
+
+[Go to top of page](#top)
+
+<a id='todo'></a>
+## create_ses_matrices.py
+
+This script creates finregistry-matrices from other data sources than endpoints and drug purchases.
+
+### Requirements
+
+The script runs using only packages installed in the `shared_env` environment of ePouta machines.
+
+### Required input
+
+### Output options
+
+[Go to top of page](#top)
+
+<a id='todo'></a>
+## To do items
+
 Todo for Zhiyu (priority)
 - More testing and debugging on the code. She is sure that they are not robust up to the standard yet (high)
 - Make the program stop complaining about missing year (low)
@@ -166,3 +200,7 @@ Todo for Zhiyu (priority)
 - Harmonise the parameter files into one yaml (medium)
 - Fix the drug list with different level of ATC code thing (medium)
 - Let Zhiyu know!
+
+[Go to top of page](#top)
+
+
