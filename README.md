@@ -186,6 +186,28 @@ The script runs using only packages installed in the `shared_env` environment of
 
 ### Required input
 
+Similarly to the other matrix generation scripts above, a configuration is required with the following entries:
+<pre>
+MinimalPhenotypeFile <em> MinimalPhenotypeFile </em>
+MarriageHistoryFile <em> MarriageHistoryFile </em>
+PedigreeFile <em> PedigreeFile </em>
+LivingExtendedFile <em> LivingExtendedFile </em>
+SESFile <em> SESFile </em>
+EducationFile <em> EducationFile </em>
+SocialAssistanceFile <em> SocialAssistanceFile </em>
+PensionFile <em> PensionFile </em>
+RelativesFile <em> RelativesFile </em>
+SocialHilmoFile <em> SocialHilmoFile </em>
+BirthFile <em> BirthFile </em>
+SampleFile  <em> SampleList </em>
+FeatureFile <em> VariableList </em>
+OutputFile  <em> OutputPrefix </em>
+ByYear  <em> T/F </em>
+OutputEventCount  <em> T/F </em>
+OutputBinary  <em> T/F </em>
+OutputAge <em> T/F </em>
+</pre>
+
 ### Output options
 
 [Go to top of page](#top)
