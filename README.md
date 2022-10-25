@@ -208,7 +208,7 @@ OutputBinary  <em> T/F </em>
 OutputAge <em> T/F </em>
 </pre>
 
-### Output options
+See an example file from `example/ses_config` to see which registry files are used as input. All other parameters work exactly as described above for generation of the drug and endpoint matrices except for `FeatureFile`. Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `xxx`.
 
 [Go to top of page](#top)
 
