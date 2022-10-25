@@ -196,6 +196,8 @@ SESFile <em> SESFile </em>
 EducationFile <em> EducationFile </em>
 SocialAssistanceFile <em> SocialAssistanceFile </em>
 PensionFile <em> PensionFile </em>
+BenefitsFile <em> BenefitsFile </em>
+EarningsFile <em> EarningsFile </em>
 RelativesFile <em> RelativesFile </em>
 SocialHilmoFile <em> SocialHilmoFile </em>
 BirthFile <em> BirthFile </em>
