@@ -212,6 +212,15 @@ OutputAge <em> T/F </em>
 
 See an example file from `example/ses_config` to see which registry files are used as input. All other parameters work exactly as described above for generation of the drug and endpoint matrices except for `FeatureFile`. Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `xxx`.
 
+### Output
+
+Output matrices are formatted similarly as to what is described above for the drug and endpoint matrices. Output is written into the path defined in the config file. Also a log file is written including the config used to evoke the script and possible warnings. It is recommended to check the log file after each run. Checks performed are listed below.
+
+### Checks
+
+- Checks that all input files can be read before starting preprocessing.
+- Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries.
+
 [Go to top of page](#top)
 
 <a id='todo'></a>
