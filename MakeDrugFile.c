@@ -96,7 +96,7 @@ void ReadParam(const char *ParamFile) {
 			p = buffer;
 			tok = strtok_r(p, " \t", &p);
 			if (tok != NULL) {
-				if (strcmp(tok, "LongEndPtFile") == 0) {
+				if (strcmp(tok, "LongFile") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(InLongFile, tok);
 				}
@@ -104,62 +104,63 @@ void ReadParam(const char *ParamFile) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(SampleListFile, tok);
 				}
-				else if (strcmp(tok, "FeatureFile") == 0) {
+				else if (strcmp(tok, "DrugList") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(FeatureListFile, tok);
 				}
-				else if (strcmp(tok, "OutputFile") == 0) {
+				else if (strcmp(tok, "OutputPrefix") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(OutFile, tok);
+					strcat(OutFile, ".Drug");
 				}
-				else if (strcmp(tok, "Source") == 0) {
+				else if (strcmp(tok, "RegSource") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(TarSource, tok);
 				}
-				else if (strcmp(tok, "MultiplyPackage") == 0) {
+				else if (strcmp(tok, "DrugMultiplyPackage") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						MultiPkg = 1;
 					else if (strcmp(tok, "F") == 0)
 						MultiPkg = 0;
 					else
-						printf("MultiplyPackage: T/F. Using default true.\n");
+						printf("DrugMultiplyPackage: T/F. Using default true.\n");
 				}
-				else if (strcmp(tok, "ByYear") == 0) {
+				else if (strcmp(tok, "DrugByYear") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						ByYear = 1;
 					else if (strcmp(tok, "F") == 0)
 						ByYear = 0;
 					else
-						printf("ByYear: T/F. Using default false.\n");
+						printf("DrugByYear: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputBinary") == 0) {
+				else if (strcmp(tok, "DrugOutputBinary") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithBinary = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithBinary = 0;
 					else
-						printf("OutputBinary: T/F. Using default false.\n");
+						printf("DrugOutputBinary: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputEventCount") == 0) {
+				else if (strcmp(tok, "DrugOutputEventCount") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithNEvent = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithNEvent = 0;
 					else
-						printf("OutputEventCount: T/F. Using default false.\n");
+						printf("DrugOutputEventCount: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputAge") == 0) {
+				else if (strcmp(tok, "DrugOutputAge") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithAge = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithAge = 0;
 					else
-						printf("OutputAge: T/F. Using default false.\n");
+						printf("DrugOutputAge: T/F. Using default false.\n");
 				}
 	    	}
 		}
