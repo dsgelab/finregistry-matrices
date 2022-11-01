@@ -5,6 +5,27 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 
 *2022-11-01 Changed some parameter titles so that the parameter file can be harmonised*
 
+Now you can use one parameter file that looks like this to run both wide endpoint generator and wide drug file generator. In this case, some parameters will be shared between both programs. Please see below for more details. Using separate parameter files still works if you prefer.
+
+<pre>
+SampleFile  <em> SampleList </em>
+OutputPrefix  <em> OutputPrefix </em>
+LongEndPtFile <em> LongitudinalEndPtFile </em>
+EndPtList <em> EndPtList </em>
+EndPtByYear  <em> T/F </em>
+EndPtOutputEventCount  <em> T/F </em>
+EndPtOutputBinary  <em> T/F </em>
+EndPtOutputAge <em> T/F </em>
+LongFile <em> LongitudinalFile </em>
+DrugList <em> DrugList </em>
+DrugByYear  <em> T/F </em>
+DrugOutputEventCount  <em> T/F </em>
+DrugOutputBinary  <em> T/F </em>
+DrugOutputAge <em> T/F </em>
+RegSource  <em> PURCH </em>
+DrugMultiplyPackage <em> T/F </em>
+</pre>
+
 *2022-10-21 changed encoding of onset age for missing events to -9.0 (used to be 0.0)*
 
 ## MakeEndPtFile.c
@@ -129,10 +150,10 @@ To excute, run
 
 See below for and example of *`ParamFile`*:
 <pre>
-LongFile <em> LongitudinalFile </em>
 SampleFile  <em> SampleList </em>
-DrugList <em> DrugList </em>
 OutputPrefix  <em> OutputPrefix </em>
+LongFile <em> LongitudinalFile </em>
+DrugList <em> DrugList </em>
 DrugByYear  <em> T/F </em>
 DrugOutputEventCount  <em> T/F </em>
 DrugOutputBinary  <em> T/F </em>
