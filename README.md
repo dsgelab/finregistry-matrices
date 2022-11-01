@@ -5,7 +5,7 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 
 *2022-11-01 Changed some parameter titles so that the parameter file can be harmonised*
 
-Now you can use one parameter file that looks like this to run both wide endpoint generator and wide drug file generator. In this case, some parameters will be shared between both programs. Please see below for more details. Using separate parameter files still works if you prefer.
+Now you can use one single parameter file that looks like below to run both wide endpoint generator and wide drug generator. In this case, some parameters will be shared between the two programs. Using separate parameter files still works if you prefer. Please see below for more details. 
 
 <pre>
 SampleFile  <em> SampleList </em>
