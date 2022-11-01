@@ -98,49 +98,50 @@ void ReadParam(const char *ParamFile) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(SampleListFile, tok);
 				}
-				else if (strcmp(tok, "FeatureFile") == 0) {
+				else if (strcmp(tok, "EndPtList") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(FeatureListFile, tok);
 				}
-				else if (strcmp(tok, "OutputFile") == 0) {
+				else if (strcmp(tok, "OutputPrefix") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					strcpy(OutFile, tok);
+					strcat(OutFile, ".EndPt");
 				}
-				else if (strcmp(tok, "ByYear") == 0) {
+				else if (strcmp(tok, "EndPtByYear") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						ByYear = 1;
 					else if (strcmp(tok, "F") == 0)
 						ByYear = 0;
 					else
-						printf("ByYear: T/F. Using default false.\n");
+						printf("EndPtByYear: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputBinary") == 0) {
+				else if (strcmp(tok, "EndPtOutputBinary") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithBinary = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithBinary = 0;
 					else
-						printf("OutputBinary: T/F. Using default false.\n");
+						printf("EndPtOutputBinary: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputEventCount") == 0) {
+				else if (strcmp(tok, "EndPtOutputEventCount") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithNEvent = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithNEvent = 0;
 					else
-						printf("OutputEventCount: T/F. Using default false.\n");
+						printf("EndPtOutputEventCount: T/F. Using default false.\n");
 				}
-				else if (strcmp(tok, "OutputAge") == 0) {
+				else if (strcmp(tok, "EndPtOutputAge") == 0) {
 					tok = strtok_r(p, " \t\n", &p);
 					if (strcmp(tok, "T") == 0)
 						WithAge = 1;
 					else if (strcmp(tok, "F") == 0)
 						WithAge = 0;
 					else
-						printf("OutputAge: T/F. Using default false.\n");
+						printf("EndPtOutputAge: T/F. Using default false.\n");
 				}
 	    	}
 		}
