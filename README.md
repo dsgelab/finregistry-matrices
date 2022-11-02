@@ -25,8 +25,6 @@ Param | Description | Type | Default
 `RegSource` | Source registry to be considered for drugs | str | PURCH
 `DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | ?
 
-*2022-10-21 changed encoding of onset age for missing events to -9.0 (used to be 0.0)*
-
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
 
