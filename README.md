@@ -8,22 +8,22 @@ Now you can use one single parameter file that looks like below to run both wide
 
 Param | Description | Type | Default
 ----- | ----------- | ---- | -------
-`SampleFile` | List of FinRegistry IDs to include | file | ?
-`OutputPrefix` | Output path | str | ? 
+`SampleFile` | List of FinRegistry IDs to include | file | None
+`OutputPrefix` | Output path | str | None
 `LongEndPtFile` | Longitudinal endpoints file path (input data) | str | None 
 `EndPtList` | List of endpoints to be included | file | None
-`EndPtByYear` | Endpoint output file by year | bool | ? 
-`EndPtOutputEventCount` | Endpoint output file with event counts | bool | ? 
-`EndPtOutputBinary` | Endpoint output file with binary indicators | bool | ? 
-`EndPtOutputAge` | Endpoint output file with age at onset | bool | ? 
+`EndPtByYear` | Endpoint output file by year | bool | F
+`EndPtOutputEventCount` | Endpoint output file with event counts | bool | F
+`EndPtOutputBinary` | Endpoint output file with binary indicators | bool | F
+`EndPtOutputAge` | Endpoint output file with age at onset | bool | F
 `LongFile` | Detailed longitudinal file path (input data) | str | None
 `DrugList` | List of drugs (ATC codes or truncated ATC codes) to be included | file | None 
-`DrugByYear` | Drug output file by year | bool | ? 
-`DrugOutputEventCount` | Drug output file with event counts | bool | ? 
-`DrugOutputBinary` | Drug output file with binary indicators | bool | ? 
-`DrugOutputAge` | Drug output file with age at ? | bool | ? 
-`RegSource` | Source registry to be considered for drugs | str | PURCH
-`DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | ?
+`DrugByYear` | Drug output file by year | bool | F
+`DrugOutputEventCount` | Drug output file with event counts | bool | F
+`DrugOutputBinary` | Drug output file with binary indicators | bool | F 
+`DrugOutputAge` | Drug output file with age at first purchase | bool | F
+`RegSource` | Source registry to be considered for drugs | str | None
+`DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | T
 
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
