@@ -179,8 +179,3 @@ where only `A02BC02` is an ATC code of full length which will be match as **exac
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "problem" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
 
-Todo for Zhiyu (priority)
-- Testing and debugging on the code, which she has been doing and thinks there may not be as much obvious problems? (low)
-- Make the program stop complaining about missing year (low)
-- Fix the drug list with different level of ATC code thing (medium)
-- Let Zhiyu know!
