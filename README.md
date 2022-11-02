@@ -1,4 +1,5 @@
 # finregistry-matrices
+
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
 **All examples appear below are hypothetical and do not contain any real data**
@@ -7,24 +8,24 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 
 Now you can use one single parameter file that looks like below to run both wide endpoint generator and wide drug generator. In this case, some parameters will be shared between the two programs. Using separate parameter files still works if you prefer. Please see below for more details. 
 
-<pre>
-SampleFile  <em> SampleList </em>
-OutputPrefix  <em> OutputPrefix </em>
-LongEndPtFile <em> LongitudinalEndPtFile </em>
-EndPtList <em> EndPtList </em>
-EndPtByYear  <em> T/F </em>
-EndPtOutputEventCount  <em> T/F </em>
-EndPtOutputBinary  <em> T/F </em>
-EndPtOutputAge <em> T/F </em>
-LongFile <em> LongitudinalFile </em>
-DrugList <em> DrugList </em>
-DrugByYear  <em> T/F </em>
-DrugOutputEventCount  <em> T/F </em>
-DrugOutputBinary  <em> T/F </em>
-DrugOutputAge <em> T/F </em>
-RegSource  <em> PURCH </em>
-DrugMultiplyPackage <em> T/F </em>
-</pre>
+Param | Description | Type | Default
+----- | ----------- | ---- | -------
+`SampleFile` | List of FinRegistry IDs to include | file | ?
+`OutputPrefix` | Output path | str | ? 
+`LongEndPtFile` | Longitudinal endpoints file path (input data) | str | None 
+`EndPtList` | List of endpoints to be included | file | None
+`EndPtByYear` | Endpoint output file by year | bool | ? 
+`EndPtOutputEventCount` | Endpoint output file with event counts | bool | ? 
+`EndPtOutputBinary` | Endpoint output file with binary indicators | bool | ? 
+`EndPtOutputAge` | Endpoint output file with age at onset | bool | ? 
+`LongFile` | Detailed longitudinal file path (input data) | str | None
+`DrugList` | List of drugs (ATC codes or truncated ATC codes) to be included | file | None 
+`DrugByYear` | Drug output file by year | bool | ? 
+`DrugOutputEventCount` | Drug output file with event counts | bool | ? 
+`DrugOutputBinary` | Drug output file with binary indicators | bool | ? 
+`DrugOutputAge` | Drug output file with age at ? | bool | ? 
+`RegSource` | Source registry to be considered for drugs | str | PURCH
+`DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | ?
 
 *2022-10-21 changed encoding of onset age for missing events to -9.0 (used to be 0.0)*
 
