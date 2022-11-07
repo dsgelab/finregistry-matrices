@@ -14,6 +14,7 @@ BirthFile	/data/processed_data/thl_birth/birth_2022-03-08.feather
 SampleFile	/tbd/sample/path/in/epouta/
 FeatureFile	./example/
 OutputFile	/tbd/output/path/in/epouta/
+CpiFile		/data/original_data/etk_pension/consumer_price_index_1972_2021.csv
 ByYear	F
 OutputEventCount	F
 OutputBinary	T
