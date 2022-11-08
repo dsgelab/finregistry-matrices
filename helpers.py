@@ -1,6 +1,7 @@
 import csv
 import pandas as pd
-import datetime
+from datetime import datetime
+from time import time
 
 def readConfig(filepath):
     #Reads in the configuration file.
@@ -42,32 +43,29 @@ def getSamplesFeatures(params):
     mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
     samples =  samples.merge(mpf,how='left',on='FINREGISTRYID')
 
-    if params['ByYear']=='F': data = samples[['FINREGISTRYID,date_of_birth','start_of_followup','end_of_followup']]
+    if params['ByYear']=='F': data = samples[['FINREGISTRYID']]
     elif params['ByYear']=='T':
         data = pd.DataFrame()
         IDs = []
-        dobs = []
         years = []
         sexs = []
-        starts = []
-        ends = []
         #create one entry row per each year of follow-up for each individual
         for index,row in samples.iterrows():
             start_year = row['start_of_followup'].year
             end_year = row['end_of_followup'].year
             for year in range(start_year,end_year+1):
                 IDs.append(row['FINREGISTRYID'])
-                dobs.append(row['date_of_birth'])
+                #dobs.append(row['date_of_birth'])
                 sexs.append(row['sex'])
-                starts.append(row['start_of_followup'])
-                ends.append(row['end_of_followup'])
+                #starts.append(row['start_of_followup'])
+                #ends.append(row['end_of_followup'])
                 years.append(year)
         data['FINREGISTRYID'] = IDs
         data['year'] = years
-        data['date_of_birth'] = dobs
+        #data['date_of_birth'] = dobs
         data['sex'] = sexs
-        data['start_of_followup'] = starts
-        data['end_of_followup'] = ends
+        #data['start_of_followup'] = starts
+        #data['end_of_followup'] = ends
         
     features = pd.read_csv(params['FeatureFile'])
     return samples,features,data
@@ -106,14 +104,18 @@ def readMinimalPheno(params,data):
         data['sex'] = sexs
         return data
 
-def readPension(data,params,cpi,requested_features):
+def readPension(samples,data,params,cpi,requested_features):
     #Read in the variables from the pension registry
     #this function currently creates three variables, which are:
     #received_disability_pension = Received disability pension
     #received_pension = Received any pension
     #total_income = Sum of labor income, pension and social benefits, indexed
+    start = time()
     keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
     pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
+    #keep only rows corresponding to IDs in samples
+    ID_set = set(samples['FINREGISTRYID'])
+    pension = pension[pension['id'].isin(ID_set)]
     #convert date strings to datetime
     pension['apvm'] = pd.to_datetime(pension['apvm'])
     pension['ppvm'] = pd.to_datetime(pension['ppvm'])
@@ -122,7 +124,7 @@ def readPension(data,params,cpi,requested_features):
         received_disability_pension = []
         received_pension = []
         total_income = []
-        for index,row in data.iterrows():
+        for index,row in samples.iterrows():
             ID = row['FINREGISTRYID']
             #get all pension info for this ID
             pension_id = pension.loc[pension['id']==ID]
@@ -169,62 +171,108 @@ def readPension(data,params,cpi,requested_features):
                 if disability: received_disability_pension.append(1)
                 else: received_disability_pension.append(0)
     elif params['ByYear']=='T':
-        #THIS IS NOT WORKING CORRECTLY AND IS ANYWAY TOO SLOW
         #one entry per each year in output
-        received_disability_pension = []
-        received_pension = []
-        total_income = []
-        for index,row in data.iterrows():
-            ID = row['FINREGISTRYID']
-            year = row['year']
-            #get all pension info for this ID
-            pension_id = pension.loc[pension['id']==ID]
-            #go through each entry
-            if len(pension_id)<1:
-                received_disability_pension.append(0)
-                received_pension.append(0)
-                total_income.append(0)
-                continue
-            else:
-                #only consider entries within the specified year
-                fu_end = row['end_of_followup']
-                tot_pension = 0.0
-                disability = False
-
-                for p_index,p_row in pension_id.iterrows():
-                    if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
-                    p_start = p_row['apvm']
-                    p_end = p_row['ppvm']
-                    if pd.isna(p_end): p_end = fu_end
-
-                    if year>=p_start.year and year<=p_end.year:
-                        #add up the  pension from year
-                        #corrected with the consumer price index
-                        if not pd.isna(p_row['ptma']): tot_pension += cpi[year]*12*p_row['ptma']
-                        if not pd.isna(p_row['ltma']): tot_pension += cpi[year]*12*p_row['ltma']
-                        if not pd.isna(p_row['jkma']):tot_pension += cpi[year]*12*p_row['jkma']
-                        #correct the amount paid if pension starts or ends in the middle of the year
-                    if year==p_start.year:
-                        if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ptma']
-                        if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ltma']
-                        if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['jkma']
-                    if year==p_end.year:
-
-                        if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ptma']
-                        if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ltma']
-                        if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['jkma']
-                #save values of the final variables for the current ID
-                total_income.append(tot_pension)
-                if tot_pension>0: received_pension.append(1)
-                else: received_pension.append(0)
-                if disability: received_disability_pension.append(1)
-                else: received_disability_pension.append(0)
-
-
+        received_disability_pension = [0 for i in range(len(data))]
+        received_pension = [0 for i in range(len(data))]
+        total_income = [0 for i in range(len(data))]
         
-    #add the created variables as columns to the df data
-    if 'total_income' in requested_features: data['total_income'] = total_income
-    if 'received_pension' in requested_features: data['received_pension'] = received_pension
-    if 'received_disability_pension' in requested_features: data['received_disability_pension'] = received_disability_pension
+        for p_index,p_row in pension.iterrows():
+            ID = p_row['id']
+            #if ID not in ID_set: continue
+            fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']#.values[0].astype(datetime)
+            fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']#.values[0].astype(datetime)
+            p_start = p_row['apvm']#.astype(datetime)
+            p_end = p_row['ppvm']#.astype(datetime)
+            if pd.isna(p_end): p_end = fu_end
+            #print("fu_start:")
+            #print(fu_start)
+            #print("fu_end:")
+            #print(fu_end)
+            #print("p_start:")
+            #print(p_start)
+            #print("p_end:")
+            #print(p_end)
+            #iterate over each year covered by this entry
+            for year in range(p_start.year,p_end.year+1):
+                if year<(fu_start.year) or year>(fu_end.year): continue
+                #add up the  pension from year
+                #corrected with the consumer price index
+                disability = False
+                tot_pension = 0.0
+                if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
+                n_month = 12
+                if year==p_start.year: n_month = n_month-(p_start.month-1)
+                if year==p_end.year: n_month = n_month-(12-p_end.month)
+                if not pd.isna(p_row['ptma']): tot_pension += cpi[year]*12*p_row['ptma']
+                if not pd.isna(p_row['ltma']): tot_pension += cpi[year]*12*p_row['ltma']
+                if not pd.isna(p_row['jkma']): tot_pension += cpi[year]*12*p_row['jkma']
+                #get the correct row index in the dataframe data
+                ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
+                total_income[ind] += tot_pension
+                if tot_pension>0: received_pension[ind] = 1
+                if disability: received_disability_pension[ind] = 1
+        #add the created variables as columns to the df data
+        if 'total_income' in requested_features: data['total_income'] = total_income
+        if 'received_pension' in requested_features: data['received_pension'] = received_pension
+        if 'received_disability_pension' in requested_features: data['received_disability_pension'] = received_disability_pension
+            
+    #else:
+    #    #THIS IS NOT WORKING CORRECTLY AND IS ANYWAY TOO SLOW
+    #    #one entry per each year in output
+    #    received_disability_pension = []
+    #    received_pension = []
+    #    total_income = []
+    #    for index,row in data.iterrows():
+    #        ID = row['FINREGISTRYID']
+    #        year = row['year']
+    #        #get all pension info for this ID
+    #        pension_id = pension.loc[pension['id']==ID]
+    #        #go through each entry
+    #        if len(pension_id)<1:
+    #            received_disability_pension.append(0)
+    #            received_pension.append(0)
+    #            total_income.append(0)
+    #            continue
+    #        else:
+    #            #only consider entries within the specified year
+    #            fu_end = row['end_of_followup']
+    #            tot_pension = 0.0
+    #            disability = False
+    #
+    #            for p_index,p_row in pension_id.iterrows():
+    #                if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
+    #                p_start = p_row['apvm']
+    #                p_end = p_row['ppvm']
+    #                if pd.isna(p_end): p_end = fu_end
+    #
+    #                if year>=p_start.year and year<=p_end.year:
+    #                    #add up the  pension from year
+    #                    #corrected with the consumer price index
+    #                    if not pd.isna(p_row['ptma']): tot_pension += cpi[year]*12*p_row['ptma']
+    #                    if not pd.isna(p_row['ltma']): tot_pension += cpi[year]*12*p_row['ltma']
+    #                    if not pd.isna(p_row['jkma']):tot_pension += cpi[year]*12*p_row['jkma']
+    #                    #correct the amount paid if pension starts or ends in the middle of the year
+    #                if year==p_start.year:
+    #                    if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ptma']
+    #                    if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ltma']
+    #                    if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['jkma']
+    #                if year==p_end.year:
+    #
+    #                    if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ptma']
+    #                    if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ltma']
+    #                    if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['jkma']
+    #            #save values of the final variables for the current ID
+    #            total_income.append(tot_pension)
+    #            if tot_pension>0: received_pension.append(1)
+    #            else: received_pension.append(0)
+    #            if disability: received_disability_pension.append(1)
+    #            else: received_disability_pension.append(0)
+    #   
+    ##add the created variables as columns to the df data
+    #if 'total_income' in requested_features: data['total_income'] = total_income
+    #if 'received_pension' in requested_features: data['received_pension'] = received_pension
+    #if 'received_disability_pension' in requested_features: data['received_disability_pension'] = received_disability_pension
+    end = time()
+    print("Pension data preprocessed in "+str(end-start)+" s")
     return data
         
