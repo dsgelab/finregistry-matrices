@@ -1,5 +1,8 @@
 import csv
+
+import numpy as np
 import pandas as pd
+
 from datetime import datetime
 from time import time
 
@@ -92,6 +95,13 @@ def testFileOpens(filepath,mode='r'):
         msg = e
     return error,msg
 
+def getOnsetAge(dob,doo):
+    #returns age of onset in decimal years
+    #dob = date of birth (datetime)
+    #doo = date of onset (datetime)
+    diff = doo-dob
+    return diff.days/365.0
+
 def readMinimalPheno(params,data):
     #Read in sex from minimal phenotype file
     mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
@@ -124,6 +134,10 @@ def readPension(samples,data,params,cpi,requested_features):
         received_disability_pension = []
         received_pension = []
         total_income = []
+        if params['OutputAge']=='T':
+            received_disability_pension_OnsetAge = []
+            received_pension_OnsetAge = []
+            total_income_OnsetAge = []
         for index,row in samples.iterrows():
             ID = row['FINREGISTRYID']
             #get all pension info for this ID
@@ -133,6 +147,10 @@ def readPension(samples,data,params,cpi,requested_features):
                 received_disability_pension.append(0)
                 received_pension.append(0)
                 total_income.append(0)
+                if params['OutputAge']=='T':
+                    received_disability_pension_OnsetAge.append(np.nan)
+                    received_pension_OnsetAge.append(np.nan)
+                    total_income_OnsetAge.append(np.nan)
                 continue
             else:
                 #only consider entries within the inclusion period of the individual
@@ -140,6 +158,9 @@ def readPension(samples,data,params,cpi,requested_features):
                 fu_end = row['end_of_followup']
                 tot_pension = 0.0
                 disability = False
+                if params['OutputAge']=='T':
+                    OnsetAge_pension = np.nan
+                    OnsetAge_disability_pension = np.nan
 
                 for p_index,p_row in pension_id.iterrows():
                     if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
@@ -150,6 +171,16 @@ def readPension(samples,data,params,cpi,requested_features):
                     if p_end<fu_start or p_start>fu_end: continue
                     if p_start<fu_start: p_start = fu_start
                     if p_end>fu_end: p_end = fu_end
+
+                    if params['OutputAge']=='T':
+                        #save the first pension occurrence for each individual
+                        dob = row['date_of_birth']
+                        age = getOnsetAge(dob,p_start)
+                        if np.isnan(OnsetAge_pension): OnsetAge_pension = age
+                        #and first disability pension occurrence
+                        if not pd.isna(p_row['tksyy1']):
+                            if np.isnan(OnsetAge_disability_pension): OnsetAge_disability_pension = age
+                            elif age<OnsetAge_disability_pension: OnsetAge_disability_pension = age
                     #add up the pension from range p_start -> p_end
                     #corrected with the consumer price index
                     for year in range(p_start.year,p_end.year+1):
@@ -170,6 +201,12 @@ def readPension(samples,data,params,cpi,requested_features):
                 else: received_pension.append(0)
                 if disability: received_disability_pension.append(1)
                 else: received_disability_pension.append(0)
+
+                if params['OutputAge']=='T':
+                    total_income_OnsetAge.append(OnsetAge_pension)
+                    received_pension_OnsetAge.append(OnsetAge_pension)
+                    received_disability_pension_OnsetAge.append(OnsetAge_disability_pension)
+                    
     elif params['ByYear']=='T':
         #one entry per each year in output
         received_disability_pension = [0 for i in range(len(data))]
@@ -211,10 +248,16 @@ def readPension(samples,data,params,cpi,requested_features):
                 total_income[ind] += tot_pension
                 if tot_pension>0: received_pension[ind] = 1
                 if disability: received_disability_pension[ind] = 1
-        #add the created variables as columns to the df data
-        if 'total_income' in requested_features: data['total_income'] = total_income
-        if 'received_pension' in requested_features: data['received_pension'] = received_pension
-        if 'received_disability_pension' in requested_features: data['received_disability_pension'] = received_disability_pension
+    #add the created variables as columns to the df data
+    if 'total_income' in requested_features:
+        data['total_income'] = total_income
+        if params['OutputAge']=='T': data['total_income_OnsetAge'] = total_income_OnsetAge
+    if 'received_pension' in requested_features:
+        data['received_pension'] = received_pension
+        if params['OutputAge']=='T': data['received_pension_OnsetAge'] = received_pension_OnsetAge
+    if 'received_disability_pension' in requested_features:
+        data['received_disability_pension'] = received_disability_pension
+        if params['OutputAge']=='T': data['received_disability_pension_OnsetAge'] = received_disability_pension_OnsetAge
             
     #else:
     #    #THIS IS NOT WORKING CORRECTLY AND IS ANYWAY TOO SLOW
@@ -276,3 +319,4 @@ def readPension(samples,data,params,cpi,requested_features):
     print("Pension data preprocessed in "+str(end-start)+" s")
     return data
         
+
