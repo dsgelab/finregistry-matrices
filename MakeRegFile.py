@@ -36,7 +36,7 @@ def MakeRegFile():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_'}
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -57,8 +57,9 @@ def MakeRegFile():
     else: logging.info('Pension data not read as no pension-related features were requested.')
 
     #save the output in the requested format
+    #missing data ouput as '' (empty cellls) to save space
+    outname = params['OutputFile']+'-matrix.csv'
+    data.to_csv(outname,sep=',',float_format='%.2f',index=False)
+    logging.info('Final output matrix saved to: '+outname)
     
-    
-
-
 MakeRegFile()
