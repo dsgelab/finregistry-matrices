@@ -185,17 +185,24 @@ def readPension(samples,data,params,cpi,requested_features):
                     #add up the pension from range p_start -> p_end
                     #corrected with the consumer price index
                     for year in range(p_start.year,p_end.year+1):
-                        if not pd.isna(p_row['ptma']): tot_pension += cpi[year]*12*p_row['ptma']
-                        if not pd.isna(p_row['ltma']): tot_pension += cpi[year]*12*p_row['ltma']
-                        if not pd.isna(p_row['jkma']):tot_pension += cpi[year]*12*p_row['jkma']
+                        if year not in cpi: C = cpi[1972]
+                        else: C = cpi[year]
+                        if not pd.isna(p_row['ptma']): tot_pension += C*12*p_row['ptma']
+                        if not pd.isna(p_row['ltma']): tot_pension += C*12*p_row['ltma']
+                        if not pd.isna(p_row['jkma']):tot_pension += C*12*p_row['jkma']
                     #correct the amount paid for first and last year
-                    if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_start.year]*(p_start.month-1)*p_row['jkma']
+                    if p_start.year not in cpi: C = cpi[1972]
+                    else: C = cpi[p_start.year]
+                    if not pd.isna(p_row['ptma']): tot_pension -= C*(p_start.month-1)*p_row['ptma']
+                    if not pd.isna(p_row['ltma']): tot_pension -= C*(p_start.month-1)*p_row['ltma']
+                    if not pd.isna(p_row['jkma']): tot_pension -= C*(p_start.month-1)*p_row['jkma']
 
-                    if not pd.isna(p_row['ptma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): tot_pension -= cpi[p_end.year]*(12-p_end.month)*p_row['jkma']
+                    if p_end.year not in cpi: C = cpi[1972]
+                    else: C = cpi[p_end.year]
+                    
+                    if not pd.isna(p_row['ptma']): tot_pension -= C*(12-p_end.month)*p_row['ptma']
+                    if not pd.isna(p_row['ltma']): tot_pension -= C*(12-p_end.month)*p_row['ltma']
+                    if not pd.isna(p_row['jkma']): tot_pension -= C*(12-p_end.month)*p_row['jkma']
                 #save values of the final variables for the current ID
                 total_income.append(tot_pension)
                 if tot_pension>0: received_pension.append(1)
@@ -251,9 +258,13 @@ def readPension(samples,data,params,cpi,requested_features):
                 n_month = 12
                 if year==p_start.year: n_month = n_month-(p_start.month-1)
                 if year==p_end.year: n_month = n_month-(12-p_end.month)
-                if not pd.isna(p_row['ptma']): tot_pension += cpi[year]*12*p_row['ptma']
-                if not pd.isna(p_row['ltma']): tot_pension += cpi[year]*12*p_row['ltma']
-                if not pd.isna(p_row['jkma']): tot_pension += cpi[year]*12*p_row['jkma']
+
+                if year not in cpi: C = cpi[1972]
+                else: C = cpi[year]
+                
+                if not pd.isna(p_row['ptma']): tot_pension += C*12*p_row['ptma']
+                if not pd.isna(p_row['ltma']): tot_pension += C*12*p_row['ltma']
+                if not pd.isna(p_row['jkma']): tot_pension += C*12*p_row['jkma']
                 #get the correct row index in the dataframe data
                 ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
                 total_income[ind] += tot_pension
@@ -458,7 +469,11 @@ def readSocialAssistance(samples,data,params,cpi,requested_features):
         fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
         #if year is outside the follow-up for this ID, skip
         if year<fu_start.year or year>fu_end.year: continue
-        income_value = row['tot_income_support']*cpi[year] #multiply with the consumer price index
+
+        if year not in cpi: C = cpi[1972]
+        else: C = cpi[year]
+        
+        income_value = row['tot_income_support']*C #multiply with the consumer price index
         if params['ByYear']=='T': ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
         else: ind = data.index[data['FINREGISTRYID']==ID][0]
         #update the values

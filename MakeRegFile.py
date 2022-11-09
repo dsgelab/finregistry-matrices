@@ -1,7 +1,8 @@
 import argparse
 import logging
 
-from helpers import readConfig,getSamplesFeatures,readMinimalPheno
+from time import time
+from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI
 
 def MakeRegFile():
 
@@ -10,6 +11,7 @@ def MakeRegFile():
     ########################
 
     parser = argparse.ArgumentParser()
+    start = time()
 
     #PARAMETERS
     parser.add_argument("--configfile",help="Full path to the configuration file.",type=str,default=None)
@@ -27,7 +29,7 @@ def MakeRegFile():
     if not isOk:
         logging.error(msg)
         print("Terminating, see the log file (path defined by args.logfile flag) for details.")
-        exit
+        return False
     else: logging.info("Config file successfully read in.")
 
 
@@ -105,6 +107,9 @@ def MakeRegFile():
     outname = params['OutputFile']+'-matrix.csv'
     data.to_csv(outname,sep=',',float_format='%.2f',index=False)
     logging.info('Final output matrix saved to: '+outname)
+    end = time()
+    print("Total running time = "+str(end-start)+" s")
+    logging.info("Total running time = "+str(end-start)+" s")
 
     
     
