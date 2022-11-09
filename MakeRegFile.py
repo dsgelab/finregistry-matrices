@@ -36,7 +36,7 @@ def MakeRegFile():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather'}
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -71,10 +71,29 @@ def MakeRegFile():
         logging.info('Income data read in.')
     else: logging.info('Income data not read as no income-related features were requested.')
 
+    ##########
+    #BENEFITS#
+    ##########
+
+    #Skipped if no variables needing income information are requested
+    benefits_set = set(['received_unemployment_allowance','received_study_allowance',
+                        'received_sickness_allowance','received_basic_unemployment_allowance',
+                        'received_maternity_paternity_parental_allowance'])
+    if len(requested_features.intersection(benefits_set))>0:
+        data = readBenefits(samples,data,params,requested_features)
+        logging.info('Benefits data read in.')
+    else: logging.info('Benefits data not read as no benefits-related features were requested.')
+
+    ########
+    #OUTPUT#
+    ########
+    
     #save the output in the requested format
     #missing data ouput as '' (empty cells) to save space
     outname = params['OutputFile']+'-matrix.csv'
     data.to_csv(outname,sep=',',float_format='%.2f',index=False)
     logging.info('Final output matrix saved to: '+outname)
+
+    
     
 MakeRegFile()
