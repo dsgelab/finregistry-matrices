@@ -284,5 +284,49 @@ def readPension(samples,data,params,cpi,requested_features):
     end = time()
     print("Pension data preprocessed in "+str(end-start)+" s")
     return data
-        
 
+def readIncome(samples,data,params,requested_features):
+    #Read in the variables from the pension registry
+    #this function currently creates two variables, which are:
+    #received_labor_income = Received labor income
+    #total_income = Sum of labor income, pension and social benefits, indexed
+    start = time()
+    keep_cols = ['id','vuosi','vuosiansio_indexed']
+    income = pd.read_feather(params['IncomeFile'],columns=keep_cols)
+    #keep only rows corresponding to IDs in samples
+    ID_set = set(samples['FINREGISTRYID'])
+    income = income[income['id'].isin(ID_set)]
+
+    #Note that the dataframe 'data' has already been initialized, so depending on the
+    #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
+    #per year.
+    #Also the variable 'total_income' is already in data
+    received_labor_income = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': received_labor_income_OnsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in income.iterrows():
+        ID = row['id']
+        year = row['vuosi']
+        fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
+        fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+        #if year is outside the follow-up for this ID, skip
+        if year<fu_start.year or year>fu_end.year: continue
+        income_value = row['vuosiansio_indexed']
+        if params['OutputAge']=='T': ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
+        else: ind = data.index[data['FINREGISTRYID']==ID][0]
+        #update the values
+        data.iloc[ind]['total_income'] += income_value
+        if income_value>0: received_labor_income[ind] = 1
+        #and the onset ages if requested
+        if params['OutputAge']=='T':
+            dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+            OnsetAge = getOnsetAge(dob,datetime(year,1,1))
+            if np.isnan(received_labor_income_OnsetAge[ind]): received_labor_income_OnsetAge[ind] = OnsetAge
+            elif received_labor_income_OnsetAge[ind]>OnsetAge: received_labor_income_OnsetAge[ind] = OnsetAge
+    #Add the new columns to data
+    data['received_labor_income'] = received_labor_income
+    if params['OutputAge']=='T': data['received_labor_income_OnsetAge'] = received_labor_income_OnsetAge
+
+    end = time()
+    print('Income data read in in '+str(end-start)+" s")
+    return data
