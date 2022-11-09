@@ -44,6 +44,7 @@ def getSamplesFeatures(params):
     samples['date_of_birth'] = pd.to_datetime(samples['date_of_birth'])
     #Read in sex from minimal phenotype file
     mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
+    #mpf['sex'] = mpf['sex'].astype('int') #This does not work for missing values...
     samples =  samples.merge(mpf,how='left',on='FINREGISTRYID')
 
     if params['ByYear']=='F': data = samples[['FINREGISTRYID']]
@@ -423,3 +424,54 @@ def readBenefits(samples,data,params,requested_features):
     end = time()
     print('Benefits data read in in '+str(end-start)+" s")
     return data
+
+def readSocialAssistance(samples,data,params,cpi,requested_features):
+    #Read in the variables from the social assistance registry
+    #this function currently creates two variables, which are:
+    #received_any_income_support = Received basic, actual, preventive or complementary income support
+    #total_income = Sum of labor income, pension and social benefits, indexed
+    
+    start = time()
+    keep_cols = ['TNRO','TILASTOVUOSI','EHKAISEVA_TOIMEENTULOTUKI_EUR','PERUS_TOIMEENTULOTUKI_EUR','TAYD_TOIMEENTULOTUKI_EUR','KUNT_TOIMINTARAHA_EUR','KUNT_MATKAKORVAUS_EUR']
+    #Note that column VARS_TOIMEENTULOTUKI_EUR seems to be sum of all other forms of income support except EHKAISEVA_TOIMEENTULOTUKI_EUR, that is why it is not used to avoid counting some of the income support twice
+    assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';')
+    #keep only rows corresponding to IDs in samples
+    ID_set = set(samples['FINREGISTRYID'])
+    assistance = assistance[assistance['TNRO'].isin(ID_set)]
+    sum_cols = list(assistance)
+    sum_cols.remove('TNRO')
+    sum_cols.remove('TILASTOVUOSI') #all columns used to compute sum of all income support
+    assistance['tot_income_support'] = assistance[sum_cols].sum(axis=1)
+    assistance = assistance[['TNRO','TILASTOVUOSI','tot_income_support']]
+
+    #Note that the dataframe 'data' has already been initialized, so depending on the
+    #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
+    #per year.
+    #Also the variable 'total_income' is already in data
+    data['received_any_income_support'] = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': data['received_any_income_support_OnsetAge'] = [np.nan for i in range(len(data))]
+
+    for index,row in assistance.iterrows():
+        ID = row['TNRO']
+        year = row['TILASTOVUOSI']
+        fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
+        fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+        #if year is outside the follow-up for this ID, skip
+        if year<fu_start.year or year>fu_end.year: continue
+        income_value = row['tot_income_support']*cpi[year] #multiply with the consumer price index
+        if params['ByYear']=='T': ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
+        else: ind = data.index[data['FINREGISTRYID']==ID][0]
+        #update the values
+        data.loc[ind,'total_income'] += income_value
+        if income_value>0: data.loc[ind,'received_any_income_support'] = 1
+        #and the onset ages if requested
+        if params['OutputAge']=='T':
+            dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+            OnsetAge = getOnsetAge(dob,datetime(year,1,1))
+            if np.isnan(data.iloc[ind]['received_any_income_support_OnsetAge']): data.loc[ind,'received_any_income_support_OnsetAge'] = OnsetAge
+            elif data.iloc[ind]['received_any_income_support_OnsetAge']>OnsetAge: data.loc[ind,'received_any_income_support_OnsetAge'] = OnsetAge
+
+    end = time()
+    print('Social assistance data read in in '+str(end-start)+" s")
+    return data
+    

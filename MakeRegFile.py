@@ -36,7 +36,7 @@ def MakeRegFile():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp'}
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -83,6 +83,18 @@ def MakeRegFile():
         data = readBenefits(samples,data,params,requested_features)
         logging.info('Benefits data read in.')
     else: logging.info('Benefits data not read as no benefits-related features were requested.')
+
+    ###################
+    #SOCIAL ASSISTANCE#
+    ###################
+
+    #Skipped if no variables needing income information are requested
+    sa_set = set(['total_income','received_any_income_support'])
+    if len(requested_features.intersection(sa_set))>0:
+        data = readSocialAssistance(samples,data,params,cpi,requested_features)
+        logging.info('Social assistance data read in.')
+    else: logging.info('Social assistance data not read as no social assistance-related features were requested.')
+
 
     ########
     #OUTPUT#
