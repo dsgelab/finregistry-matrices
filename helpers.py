@@ -37,23 +37,28 @@ def readConfig(filepath):
 def getSamplesFeatures(params):
     #Read in the IDs of samples and variables to use in the output
     #return initialized output dataframe
+    start = time()
     samples = pd.read_csv(params['SampleFile'])
+    ID_set = set(list(samples['FINREGISTRYID']))
     #convert the date columns to datetime
     samples['start_of_followup'] = pd.to_datetime(samples['start_of_followup'])
     samples['end_of_followup'] = pd.to_datetime(samples['end_of_followup'])
     samples['date_of_birth'] = pd.to_datetime(samples['date_of_birth'])
     #Read in sex from minimal phenotype file
     mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
+    mpf = mpf[mpf['FINREGISTRYID'].isin(ID_set)]
     #mpf['sex'] = mpf['sex'].astype('int') #This does not work for missing values...
     samples =  samples.merge(mpf,how='left',on='FINREGISTRYID')
 
-    if params['ByYear']=='F': data = samples[['FINREGISTRYID']]
+    if params['ByYear']=='F': data = samples[['FINREGISTRYID','sex']]
     elif params['ByYear']=='T':
+        data_ind_dict = {}
         data = pd.DataFrame()
         IDs = []
         years = []
         sexs = []
         #create one entry row per each year of follow-up for each individual
+        ind = 0
         for index,row in samples.iterrows():
             start_year = row['start_of_followup'].year
             end_year = row['end_of_followup'].year
@@ -64,16 +69,28 @@ def getSamplesFeatures(params):
                 #starts.append(row['start_of_followup'])
                 #ends.append(row['end_of_followup'])
                 years.append(year)
+                data_ind_dict[(row['FINREGISTRYID'],year)] = ind
+                ind += 1
         data['FINREGISTRYID'] = IDs
         data['year'] = years
         #data['date_of_birth'] = dobs
         data['sex'] = sexs
         #data['start_of_followup'] = starts
         #data['end_of_followup'] = ends
-        
-    features = pd.read_csv(params['FeatureFile'])
-    return samples,features,data
 
+    #create a dictionary mapping the ID+year pairs to indices of dataframe data
+    features = pd.read_csv(params['FeatureFile'])
+    if params['ByYear']=='F':
+        data_ind_dict = dict(zip(list(data['FINREGISTRYID']),list(data.index)))
+        end = time()
+        print("Data structures initialized in "+str(end-start)+" s")
+        return samples,features,data,ID_set,data_ind_dict,data_ind_dict
+    elif params['ByYear']=='T':
+        samples_ind_dict = dict(zip(list(samples['FINREGISTRYID']),list(samples.index)))
+        end = time()
+        print("Data structures initialized in "+str(end-start)+" s")
+        return samples,features,data,ID_set,data_ind_dict,samples_ind_dict
+    
 def getCPI(params):
     #Read in the consumer price index correction table
     with open(params['CpiFile'],'rt') as infile:
@@ -115,7 +132,7 @@ def readMinimalPheno(params,data):
         data['sex'] = sexs
         return data
 
-def readPension(samples,data,params,cpi,requested_features):
+def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
     #this function currently creates three variables, which are:
     #received_disability_pension = Received disability pension
@@ -125,7 +142,6 @@ def readPension(samples,data,params,cpi,requested_features):
     keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
     pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    ID_set = set(samples['FINREGISTRYID'])
     pension = pension[pension['id'].isin(ID_set)]
     #convert date strings to datetime
     pension['apvm'] = pd.to_datetime(pension['apvm'])
@@ -226,8 +242,8 @@ def readPension(samples,data,params,cpi,requested_features):
             total_income_OnsetAge = [np.nan for i in range(len(data))]
         for p_index,p_row in pension.iterrows():
             ID = p_row['id']
-            fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-            fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
+            fu_start = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
             p_start = p_row['apvm']#.astype(datetime)
             p_end = p_row['ppvm']#.astype(datetime)
             if pd.isna(p_end): p_end = fu_end
@@ -241,7 +257,7 @@ def readPension(samples,data,params,cpi,requested_features):
             #print(p_end)
             if params['OutputAge']=='T':
                 #output also ages of onset
-                dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
             #iterate over each year covered by this entry
             for year in range(p_start.year,p_end.year+1):
                 if year<(fu_start.year) or year>(fu_end.year): continue
@@ -266,7 +282,7 @@ def readPension(samples,data,params,cpi,requested_features):
                 if not pd.isna(p_row['ltma']): tot_pension += C*12*p_row['ltma']
                 if not pd.isna(p_row['jkma']): tot_pension += C*12*p_row['jkma']
                 #get the correct row index in the dataframe data
-                ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
+                ind = data.iloc[data_ind_dict[(ID,year)]]#data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
                 total_income[ind] += tot_pension
                 if tot_pension>0: received_pension[ind] = 1
                 
@@ -297,7 +313,7 @@ def readPension(samples,data,params,cpi,requested_features):
     print("Pension data preprocessed in "+str(end-start)+" s")
     return data
 
-def readIncome(samples,data,params,requested_features):
+def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
     #this function currently creates two variables, which are:
     #received_labor_income = Received labor income
@@ -306,36 +322,39 @@ def readIncome(samples,data,params,requested_features):
     keep_cols = ['id','vuosi','vuosiansio_indexed']
     income = pd.read_feather(params['IncomeFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    ID_set = set(samples['FINREGISTRYID'])
     income = income[income['id'].isin(ID_set)]
 
     #Note that the dataframe 'data' has already been initialized, so depending on the
     #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
     #per year.
     #Also the variable 'total_income' is already in data
+    labor_income = [0 for i in range(len(data))]
     received_labor_income = [0 for i in range(len(data))]
     if params['OutputAge']=='T': received_labor_income_OnsetAge = [np.nan for i in range(len(data))]
 
     for index,row in income.iterrows():
         ID = row['id']
         year = row['vuosi']
-        fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-        fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+        
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
         #if year is outside the follow-up for this ID, skip
         if year<fu_start.year or year>fu_end.year: continue
         income_value = row['vuosiansio_indexed']
-        if params['ByYear']=='T': ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
-        else: ind = data.index[data['FINREGISTRYID']==ID][0]
+        
         #update the values
-        data.loc[ind,'total_income'] += income_value
+        if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
+        else: ind = data_ind_dict[ID]
+        labor_income[ind] += income_value
         if income_value>0: received_labor_income[ind] = 1
         #and the onset ages if requested
         if params['OutputAge']=='T':
-            dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+            dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
             OnsetAge = getOnsetAge(dob,datetime(year,1,1))
             if np.isnan(received_labor_income_OnsetAge[ind]): received_labor_income_OnsetAge[ind] = OnsetAge
             elif received_labor_income_OnsetAge[ind]>OnsetAge: received_labor_income_OnsetAge[ind] = OnsetAge
     #Add the new columns to data
+    data['total_income'] = data['total_income'].add(labor_income,axis='index')
     data['received_labor_income'] = received_labor_income
     if params['OutputAge']=='T': data['received_labor_income_OnsetAge'] = received_labor_income_OnsetAge
 
@@ -343,7 +362,7 @@ def readIncome(samples,data,params,requested_features):
     print('Income data read in in '+str(end-start)+" s")
     return data
 
-def readBenefits(samples,data,params,requested_features):
+def readBenefits(data,params,requested_features,ID_set):
     #Read in the variables from the pension registry
     #this function currently creates six variables, which are:
     #received_unemployment_allowance = Received earnings-related unemployment allowance
@@ -357,7 +376,6 @@ def readBenefits(samples,data,params,requested_features):
     keep_cols = ['id','etuuslaji','alkamispvm','paattymispvm']
     benefits = pd.read_feather(params['BenefitsFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    ID_set = set(samples['FINREGISTRYID'])
     benefits = benefits[benefits['id'].isin(ID_set)]
     #convert the dates to datetime
     benefits['alkamispvm'] = pd.to_datetime(benefits['alkamispvm'])
@@ -385,8 +403,9 @@ def readBenefits(samples,data,params,requested_features):
         ID = row['id']
         b_start = row['alkamispvm'] #start date of allowance
         b_end = row['paattymispvm'] #end date of allowance
-        fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-        fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
         #if the benefit period is outside the follow-up for this ID, skip
         if b_end<fu_start or b_start>fu_end: continue
         #get the type of social benefit
@@ -409,24 +428,24 @@ def readBenefits(samples,data,params,requested_features):
         if b_end>fu_end: b_end = fu_end
         
         if params['ByYear']=='F':
-            ind = data.index[data['FINREGISTRYID']==ID][0]
+            ind = data_ind_dict[ID]#data.index[data['FINREGISTRYID']==ID][0]
             #update the values
             data.loc[ind,benefit_var] = 1
             #and the onset ages if requested
             if params['OutputAge']=='T':
-                dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
                 OnsetAge = getOnsetAge(dob,b_start)
                 if np.isnan(data.iloc[ind][benefit_var+'_OnsetAge']): data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
                 elif data.iloc[ind][benefit_var+'_OnsetAge']>OnsetAge: data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
             
         elif params['ByYear']=='T':
             for year in range(b_start.year,b_end.year+1):
-                ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
+                ind = data_ind_dict[(ID,year)]#data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
                 #update the values
                 data.loc[ind,benefit_var] = 1
                 #and the onset ages if requested
                 if params['OutputAge']=='T':
-                    dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
+                    dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
                     if year==b_start.year: onset_date = b_start
                     else: onset_date = datetime(year,1,1)
                     OnsetAge = getOnsetAge(dob,onset_date)
@@ -436,7 +455,8 @@ def readBenefits(samples,data,params,requested_features):
     print('Benefits data read in in '+str(end-start)+" s")
     return data
 
-def readSocialAssistance(samples,data,params,cpi,requested_features):
+def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set):
+    #NEED TO STILL GO THROUGH THIS FUNCTION TO MAKE IT FASTER
     #Read in the variables from the social assistance registry
     #this function currently creates two variables, which are:
     #received_any_income_support = Received basic, actual, preventive or complementary income support
@@ -447,7 +467,6 @@ def readSocialAssistance(samples,data,params,cpi,requested_features):
     #Note that column VARS_TOIMEENTULOTUKI_EUR seems to be sum of all other forms of income support except EHKAISEVA_TOIMEENTULOTUKI_EUR, that is why it is not used to avoid counting some of the income support twice
     assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';')
     #keep only rows corresponding to IDs in samples
-    ID_set = set(samples['FINREGISTRYID'])
     assistance = assistance[assistance['TNRO'].isin(ID_set)]
     sum_cols = list(assistance)
     sum_cols.remove('TNRO')

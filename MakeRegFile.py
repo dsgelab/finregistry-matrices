@@ -11,7 +11,7 @@ def MakeRegFile():
     ########################
 
     parser = argparse.ArgumentParser()
-    start = time()
+    
 
     #PARAMETERS
     parser.add_argument("--configfile",help="Full path to the configuration file.",type=str,default=None)
@@ -33,16 +33,17 @@ def MakeRegFile():
     else: logging.info("Config file successfully read in.")
 
 
+    start = time()
     #The following lines are for testing the code in ipython
     logging.shutdown()
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_100IDs.txt','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_N=10000.csv','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'F','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp'}
     #ipython test lines end here
     
     #read in the samples and features to use in the output
-    samples,features,data = getSamplesFeatures(params)
+    samples,features,data,ID_set,data_ind_dict,samples_ind_dict = getSamplesFeatures(params)
     requested_features = set(features['variable_name'])
     logging.info('Samples and features read in.')
     
@@ -58,7 +59,7 @@ def MakeRegFile():
     #This step can be skipped if no variables from pension registry are requested
     pension_set = set(['received_disability_pension','received_pension','total_income'])
     if len(requested_features.intersection(pension_set))>0:
-        data = readPension(samples,data,params,cpi,requested_features)
+        data = readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Pension data read in.')
     else: logging.info('Pension data not read as no pension-related features were requested.')
 
@@ -69,7 +70,7 @@ def MakeRegFile():
     #Skipped if no variables needing income information are requested
     income_set = set(['total_income','received_labor_income'])
     if len(requested_features.intersection(income_set))>0:
-        data = readIncome(samples,data,params,requested_features)
+        data = readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Income data read in.')
     else: logging.info('Income data not read as no income-related features were requested.')
 
@@ -82,7 +83,7 @@ def MakeRegFile():
                         'received_sickness_allowance','received_basic_unemployment_allowance',
                         'received_maternity_paternity_parental_allowance'])
     if len(requested_features.intersection(benefits_set))>0:
-        data = readBenefits(samples,data,params,requested_features)
+        data = readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Benefits data read in.')
     else: logging.info('Benefits data not read as no benefits-related features were requested.')
 
@@ -93,7 +94,7 @@ def MakeRegFile():
     #Skipped if no variables needing income information are requested
     sa_set = set(['total_income','received_any_income_support'])
     if len(requested_features.intersection(sa_set))>0:
-        data = readSocialAssistance(samples,data,params,cpi,requested_features)
+        data = readSocialAssistance(samples,data,params,cpi,requested_features,ID_set)
         logging.info('Social assistance data read in.')
     else: logging.info('Social assistance data not read as no social assistance-related features were requested.')
 
