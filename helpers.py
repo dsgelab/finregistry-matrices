@@ -362,7 +362,7 @@ def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,sampl
     print('Income data read in in '+str(end-start)+" s")
     return data
 
-def readBenefits(data,params,requested_features,ID_set):
+def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
     #this function currently creates six variables, which are:
     #received_unemployment_allowance = Received earnings-related unemployment allowance
@@ -455,8 +455,7 @@ def readBenefits(data,params,requested_features,ID_set):
     print('Benefits data read in in '+str(end-start)+" s")
     return data
 
-def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set):
-    #NEED TO STILL GO THROUGH THIS FUNCTION TO MAKE IT FASTER
+def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the social assistance registry
     #this function currently creates two variables, which are:
     #received_any_income_support = Received basic, actual, preventive or complementary income support
@@ -478,14 +477,15 @@ def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set):
     #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
     #per year.
     #Also the variable 'total_income' is already in data
-    data['received_any_income_support'] = [0 for i in range(len(data))]
-    if params['OutputAge']=='T': data['received_any_income_support_OnsetAge'] = [np.nan for i in range(len(data))]
+    received_any_income_support = [0 for i in range(len(data))]
+    support_income = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': received_any_income_support_OnsetAge = [np.nan for i in range(len(data))]
 
     for index,row in assistance.iterrows():
         ID = row['TNRO']
         year = row['TILASTOVUOSI']
-        fu_end = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-        fu_start = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
         #if year is outside the follow-up for this ID, skip
         if year<fu_start.year or year>fu_end.year: continue
 
@@ -493,18 +493,23 @@ def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set):
         else: C = cpi[year]
         
         income_value = row['tot_income_support']*C #multiply with the consumer price index
-        if params['ByYear']=='T': ind = data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
-        else: ind = data.index[data['FINREGISTRYID']==ID][0]
+        if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
+        else: ind = data_ind_dict[ID]
         #update the values
-        data.loc[ind,'total_income'] += income_value
-        if income_value>0: data.loc[ind,'received_any_income_support'] = 1
+        support_income[ind] += income_value
+        if income_value>0: received_any_income_support[ind] = 1
         #and the onset ages if requested
         if params['OutputAge']=='T':
             dob = samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
             OnsetAge = getOnsetAge(dob,datetime(year,1,1))
-            if np.isnan(data.iloc[ind]['received_any_income_support_OnsetAge']): data.loc[ind,'received_any_income_support_OnsetAge'] = OnsetAge
-            elif data.iloc[ind]['received_any_income_support_OnsetAge']>OnsetAge: data.loc[ind,'received_any_income_support_OnsetAge'] = OnsetAge
+            if np.isnan(received_any_income_support_OnsetAge[ind]): received_any_income_support_OnsetAge[ind] = OnsetAge
+            elif received_any_income_support_OnsetAge[ind]>OnsetAge: received_any_income_support_OnsetAge[ind] = OnsetAge
 
+    #add the newly preprocessed values to data
+    data['total_income'] = data['total_income'].add(support_income,axis='index')
+    data['received_any_income_support'] = received_any_income_support
+    if params['OutputAge']=='T': data['received_any_income_support_OnsetAge'] = received_any_income_support_OnsetAge
+    
     end = time()
     print('Social assistance data read in in '+str(end-start)+" s")
     return data
