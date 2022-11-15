@@ -147,6 +147,94 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
     pension['apvm'] = pd.to_datetime(pension['apvm'])
     pension['ppvm'] = pd.to_datetime(pension['ppvm'])
 
+    received_disability_pension = [0 for i in range(len(data))]
+    received_pension = [0 for i in range(len(data))]
+    total_income = [0.0 for i in range(len(data))]
+
+    if params['OutputAge']=='T':
+        received_disability_pension_OnsetAge = [np.nan for i in range(len(data))]
+        received_pension_OnsetAge = [np.nan for i in range(len(data))]
+        total_income_OnsetAge = [np.nan for i in range(len(data))]
+
+    for p_indx,p_row in pension.iterrows():
+        ID = p_row['id']
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+        dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+
+        p_start = p_row['apvm']
+        p_end = p_row['ppvm']
+        if pd.isna(p_end): p_end = fu_end
+                    
+        if p_end<fu_start or p_start>fu_end: continue
+        if p_start<fu_start: p_start = fu_start
+        if p_end>fu_end: p_end = fu_end
+        
+        #add up the pension from range p_start -> p_end
+        #corrected with the consumer price index
+        for year in range(p_start.year,p_end.year+1):
+            #correct for start and end years not necessarily being full years
+            nmonths = 12
+            if year==p_start.year: nmonths = 13-p_start.month
+            if year==p_end.year: nmonths = p_end.month
+
+            #get corresponding index in the dataframe data
+            if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
+            elif params['ByYear']=='F': ind = data_ind_dict[ID]
+
+            if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = True #ID has received disability pension
+
+            #if year is earlier than the earliest entry in the cpi table, use then index for year 1972
+            if year not in cpi: C = cpi[1972]
+            else: C = cpi[year]
+            
+            if not pd.isna(p_row['ptma']): total_income[ind] += C*nmonths*p_row['ptma']
+            if not pd.isna(p_row['ltma']): total_income[ind] += C*nmonths*p_row['ltma']
+            if not pd.isna(p_row['jkma']): total_income[ind] += C*nmonths*p_row['jkma']
+
+            if params['OutputAge']=='T':
+                if year==p_start.year: onset_date = p_start
+                else: onset_date = datetime(year,1,1)
+                OnsetAge = getOnsetAge(dob,onset_date)
+                #pension onset age/income onset age/disability pension onset age,
+                #these are the same as this is the first data source to read in
+                if np.isnan(received_pension_OnsetAge[ind]):
+                    received_pension_OnsetAge[ind] = OnsetAge
+                    total_income_OnsetAge[ind] = OnsetAge
+                    if received_disability_pension[ind]: received_disability_pension_OnsetAge[ind] = OnsetAge
+                elif received_pension_OnsetAge[ind]>OnsetAge:
+                    received_pension_OnsetAge[ind] = OnsetAge
+                    total_income_OnsetAge[ind] = OnsetAge
+                    if received_disability_pension[ind]: received_disability_pension_OnsetAge[ind] = OnsetAge
+    #add the new columns to dataframe data
+    if 'total_income' in requested_features:
+        data['total_income'] = total_income
+        if params['OutputAge']=='T': data['total_income_OnsetAge'] = total_income_OnsetAge
+    if 'received_pension' in requested_features:
+        data['received_pension'] = received_pension
+        if params['OutputAge']=='T': data['received_pension_OnsetAge'] = received_pension_OnsetAge
+    if 'received_disability_pension' in requested_features:
+        data['received_disability_pension'] = received_disability_pension
+        if params['OutputAge']=='T': data['received_disability_pension_OnsetAge'] = received_disability_pension_OnsetAge
+    end = time()
+    print("Pension data preprocessed in "+str(end-start)+" s")
+    return data
+                
+def readPension_old(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
+    #Read in the variables from the pension registry
+    #this function currently creates three variables, which are:
+    #received_disability_pension = Received disability pension
+    #received_pension = Received any pension
+    #total_income = Sum of labor income, pension and social benefits, indexed
+    start = time()
+    keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
+    pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
+    #keep only rows corresponding to IDs in samples
+    pension = pension[pension['id'].isin(ID_set)]
+    #convert date strings to datetime
+    pension['apvm'] = pd.to_datetime(pension['apvm'])
+    pension['ppvm'] = pd.to_datetime(pension['ppvm'])
+
     if params['ByYear']=='F':
         received_disability_pension = []
         received_pension = []
