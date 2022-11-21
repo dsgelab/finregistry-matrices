@@ -143,6 +143,7 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
     pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
     pension = pension[pension['id'].isin(ID_set)]
+    print("Pension, number or data rows: "+str(len(pension)))
     #convert date strings to datetime
     pension['apvm'] = pd.to_datetime(pension['apvm'])
     pension['ppvm'] = pd.to_datetime(pension['ppvm'])
@@ -182,7 +183,7 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
             if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
             elif params['ByYear']=='F': ind = data_ind_dict[ID]
 
-            if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = True #ID has received disability pension
+            if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = 1 #ID has received disability pension
 
             #if year is earlier than the earliest entry in the cpi table, use then index for year 1972
             if year not in cpi: C = cpi[1972]
@@ -411,7 +412,8 @@ def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,sampl
     income = pd.read_feather(params['IncomeFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
     income = income[income['id'].isin(ID_set)]
-
+    print("Income, number or data rows: "+str(len(income)))
+    
     #Note that the dataframe 'data' has already been initialized, so depending on the
     #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
     #per year.
@@ -451,6 +453,108 @@ def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,sampl
     return data
 
 def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict):
+    #Read in the variables from the pension registry
+    #this function currently creates six variables, which are:
+    #received_unemployment_allowance = Received earnings-related unemployment allowance
+    #received_study_allowance = Received study allowance (only including finished degrees)
+    #received_sickness_allowance = Received sickness daily allowance
+    #received_basic_unemployment_allowance = Received basic daily unemployment allowance
+    #received_maternity_paternity_parental_allowance = Received materntity, paternity or parental allowance
+    #received_other_allowance = REceived any other type of allowance (source: ETK Pension)
+    
+    start = time()
+    keep_cols = ['id','etuuslaji','alkamispvm','paattymispvm']
+    benefits = pd.read_feather(params['BenefitsFile'],columns=keep_cols)
+    #keep only rows corresponding to IDs in samples
+    benefits = benefits[benefits['id'].isin(ID_set)]
+    print("Benefits, number or data rows: "+str(len(benefits)))
+    #convert the dates to datetime
+    benefits['alkamispvm'] = pd.to_datetime(benefits['alkamispvm'])
+    benefits['paattymispvm'] = pd.to_datetime(benefits['paattymispvm'])
+    #Note that the dataframe 'data' has already been initialized, so depending on the
+    #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
+    #per year.
+    new_cols = {}
+    new_cols['received_unemployment_allowance'] = [0 for i in range(len(data))]
+    new_cols['received_study_allowance'] = [0 for i in range(len(data))]
+    new_cols['received_sickness_allowance'] = [0 for i in range(len(data))]
+    new_cols['received_basic_unemployment_allowance'] = [0 for i in range(len(data))]
+    new_cols['received_maternity_paternity_parental_allowance'] = [0 for i in range(len(data))]
+    new_cols['received_other_allowance'] = [0 for i in range(len(data))]
+
+    if params['OutputAge']=='T':
+        new_cols['received_unemployment_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        new_cols['received_study_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        new_cols['received_sickness_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        new_cols['received_basic_unemployment_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        new_cols['received_maternity_paternity_parental_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        new_cols['received_other_allowance_OnsetAge'] = [np.nan for i in range(len(data))]
+        
+        
+    for index,row in benefits.iterrows():
+        ID = row['id']
+        b_start = row['alkamispvm'] #start date of allowance
+        b_end = row['paattymispvm'] #end date of allowance
+
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+        #if the benefit period is outside the follow-up for this ID, skip
+        if b_end<fu_start or b_start>fu_end: continue
+        #get the type of social benefit
+        benefit_type = int(row['etuuslaji'])
+        if benefit_type==100 or benefit_type==101 or benefit_type==102 or benefit_type==103:
+            #maternity, paternity or parental benefit
+            benefit_var = 'received_maternity_paternity_parental_allowance'
+        elif benefit_type==120 or benefit_type==121:
+            #sickness allowance or partial sickness allowance
+            benefit_var = 'received_sickness_allowance'
+        elif benefit_type==150:
+            #basic unemployment allowance
+            benefit_var = 'received_basic_unemployment_allowance'
+        elif benefit_type==210:
+            #Earnings-related unemployment allowance
+            benefit_var = 'received_unemployment_allowance'
+        else: benefit_var = 'received_other_allowance'
+
+        if b_start<fu_start: b_start = fu_start
+        if b_end>fu_end: b_end = fu_end
+        
+        if params['ByYear']=='F':
+            ind = data_ind_dict[ID]
+            #update the values
+            new_cols[benefit_var][ind] = 1
+            #and the onset ages if requested
+            if params['OutputAge']=='T':
+                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+                OnsetAge = getOnsetAge(dob,b_start)
+                if np.isnan(new_cols[benefit_var+'_OnsetAge'][ind]): new_cols[benefit_var+'_OnsetAge'][ind] = OnsetAge
+                elif new_cols[benefit_var+'_OnsetAge'][ind]>OnsetAge: new_cols[benefit_var+'_OnsetAge'][ind] = OnsetAge
+            
+        elif params['ByYear']=='T':
+            for year in range(b_start.year,b_end.year+1):
+                ind = data_ind_dict[(ID,year)]
+                #update the values
+                new_cols[benefit_var][ind] = 1
+                #and the onset ages if requested
+                if params['OutputAge']=='T':
+                    dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+                    if year==b_start.year: onset_date = b_start
+                    else: onset_date = datetime(year,1,1)
+                    OnsetAge = getOnsetAge(dob,onset_date)
+                    if np.isnan(data.iloc[ind][benefit_var+'_OnsetAge']): data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
+                    elif data.iloc[ind][benefit_var+'_OnsetAge']>OnsetAge: data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
+
+    #add the new columns
+    for key in new_cols:
+        if key in requested_features:
+            data[key] = new_cols[key]
+            if params['OutputAge']=='T': data[key+'_OnsetAge'] = new_cols[key+'_OnsetAge']
+    end = time()
+    print('Benefits data read in in '+str(end-start)+" s")
+    return data
+
+
+def readBenefits_old(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
     #this function currently creates six variables, which are:
     #received_unemployment_allowance = Received earnings-related unemployment allowance
@@ -555,6 +659,7 @@ def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_
     assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';')
     #keep only rows corresponding to IDs in samples
     assistance = assistance[assistance['TNRO'].isin(ID_set)]
+    print("Social assistance, number or data rows: "+str(len(assistance)))
     sum_cols = list(assistance)
     sum_cols.remove('TNRO')
     sum_cols.remove('TILASTOVUOSI') #all columns used to compute sum of all income support
