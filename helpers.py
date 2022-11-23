@@ -779,16 +779,16 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
             #are marked with 1. Do for example if a person gets married before the start of the
             #follow-up period, they will only have married=0 entries for each year
 
-            if m_start.year==marriage_date.year:
+            if m_start==marriage_date:
                 m_ind = data_ind_dict[(ID,marriage_date.year)]
                 #update the values
                 #note that if a person has divorced, they must have been married or in a
                 #registered partnership
                 married[m_ind] = 1
-                if divorce_date is not None:
-                    if divorce_date.year==m_end.year:
-                        d_ind = data_ind_dict[(ID,divorce_date.year)]
-                        divorced[d_ind] = 1
+                #if divorce_date is not None:
+                if divorce_date==m_end:
+                    d_ind = data_ind_dict[(ID,divorce_date.year)]
+                    divorced[d_ind] = 1
                 #and the onset ages if requested
                 if params['OutputAge']=='T':
                     dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
@@ -797,7 +797,7 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
                     elif married_OnsetAge[m_ind]>OnsetAge: married_OnsetAge[m_ind] = OnsetAge
                     if divorce_date is not None:
                         #only count the divorce if it happens this year
-                        if divorce_date.year==m_end.year:
+                        if divorce_date==m_end:
                             OnsetAge = getOnsetAge(dob,divorce_date)
                             if np.isnan(divorced_OnsetAge[d_ind]): divorced_OnsetAge[d_ind] = OnsetAge
                             elif divorced_OnsetAge[d_ind]>OnsetAge: divorced_OnsetAge[d_ind] = OnsetAge
@@ -827,13 +827,13 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
             #                if np.isnan(divorced_OnsetAge[ind]): divorced_OnsetAge[ind] = OnsetAge
             #                elif divorced_OnsetAge[ind]>OnsetAge: divorced_OnsetAge[ind] = OnsetAge
                         
-        #Add the new variables
-        if 'divorced' in requested_features:
-            data['divorced'] = divorced
-            if params['OutputAge']=='T': data['divorced_OnsetAge'] = divorced_OnsetAge
-        if 'married' in requested_features:
-            data['married'] = married
-            if params['OutputAge']=='T': data['married_OnsetAge'] = married_OnsetAge
+    #Add the new variables
+    if 'divorced' in requested_features:
+        data['divorced'] = divorced
+        if params['OutputAge']=='T': data['divorced_OnsetAge'] = divorced_OnsetAge
+    if 'married' in requested_features:
+        data['married'] = married
+        if params['OutputAge']=='T': data['married_OnsetAge'] = married_OnsetAge
             
     end = time()
     print('Marital status data read in in '+str(end-start)+" s")
