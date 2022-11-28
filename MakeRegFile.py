@@ -2,7 +2,7 @@ import argparse
 import logging
 
 from time import time
-from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI
+from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree
 
 def MakeRegFile():
 
@@ -109,6 +109,17 @@ def MakeRegFile():
         data = readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Marital status data read in.')
     else: logging.info('Marital status data not read as no marital status-related features were requested.')
+
+    ##########
+    #CHILDREN#
+    ##########
+
+    #Skipped if no variables needing information about children are requested
+    ch_set = set(['number_of_children'])
+    if len(requested_features.intersection(ch_set))>0:
+        data = readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
+        logging.info('Pedigree read in.')
+    else: logging.info('Pedigree not read as no pedigree-related features were requested.')
 
 
     ########

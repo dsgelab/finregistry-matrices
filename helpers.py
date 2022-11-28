@@ -183,6 +183,7 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
             if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
             elif params['ByYear']=='F': ind = data_ind_dict[ID]
 
+            received_pension[ind] = 1#ID has received any pension
             if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = 1 #ID has received disability pension
 
             #if year is earlier than the earliest entry in the cpi table, use then index for year 1972
@@ -531,6 +532,14 @@ def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,sam
                 elif new_cols[benefit_var+'_OnsetAge'][ind]>OnsetAge: new_cols[benefit_var+'_OnsetAge'][ind] = OnsetAge
             
         elif params['ByYear']=='T':
+            #In some cases the starting date of the benefit is missing, this means
+            #the entry is skipped
+            if np.isnan(b_start.year): continue
+            if np.isnan(b_start.year) or np.isnan(b_end.year):
+                print(row)
+                print(b_start)
+                print(b_end)
+                print(samples.iloc[samples_ind_dict[ID]])
             for year in range(b_start.year,b_end.year+1):
                 ind = data_ind_dict[(ID,year)]
                 #update the values
@@ -801,31 +810,6 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
                             OnsetAge = getOnsetAge(dob,divorce_date)
                             if np.isnan(divorced_OnsetAge[d_ind]): divorced_OnsetAge[d_ind] = OnsetAge
                             elif divorced_OnsetAge[d_ind]>OnsetAge: divorced_OnsetAge[d_ind] = OnsetAge
-                
-
-            
-            #for year in [m_start.year,m_end.year]:
-            #    if np.isnan(year): continue
-            #    ind = data_ind_dict[(ID,year)]
-            #    #update the values
-            #    #note that if a person has divorced, they must have been married or in a
-            #    #registered partnership
-            #    if year==marriage_date.year: married[ind] = 1
-            #    if divorce_date is not None:
-            #        if divorce_date.year==year: divorced[ind] = 1
-            #    #and the onset ages if requested
-            #    if params['OutputAge']=='T':
-            #        dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
-            #        if year==marriage_date.year:
-            #            OnsetAge = getOnsetAge(dob,marriage_date)
-            #            if np.isnan(married_OnsetAge[ind]): married_OnsetAge[ind] = OnsetAge
-            #            elif married_OnsetAge[ind]>OnsetAge: married_OnsetAge = OnsetAge
-            #        if divorce_date is not None:
-            #            #only count the divorce if it happens this year
-            #            if divorce_date.year==year:
-            #                OnsetAge = getOnsetAge(dob,divorce_date)
-            #                if np.isnan(divorced_OnsetAge[ind]): divorced_OnsetAge[ind] = OnsetAge
-            #                elif divorced_OnsetAge[ind]>OnsetAge: divorced_OnsetAge[ind] = OnsetAge
                         
     #Add the new variables
     if 'divorced' in requested_features:
@@ -838,4 +822,24 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
     end = time()
     print('Marital status data read in in '+str(end-start)+" s")
     return data
+
+def readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
+    #Read in the variables from the FinRegistry pedigree
+    #this function currently creates one variables, which is:
+    #children	Whether the individual has children.
     
+    start = time()
+    keep_cols = ['ID','MOTHER_ID','FATHER_ID','Birth_Date']
+    pedigree = pd.read_csv(params['PedigreeFile'],usecols=keep_cols,sep=',')
+    #keep only rows corresponding to IDs in samples
+    pedigree = pedigree[(pedigree['MOTHER_ID'].isin(ID_set)) | (pedigree['FATHER_ID'].isin(ID_set))]
+    #convert date columns to datetime
+    pedigree['Birth_Date'] = pd.to_datetime(pedigree['Birth_Date'])
+    
+    print("Pedigree, number or data rows: "+str(len(marriage)))
+
+    #initialize the new column
+    children = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': children_OnsetAge = [np.nan for i in range(len(data))]
+
+    return data
