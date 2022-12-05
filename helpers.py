@@ -134,9 +134,10 @@ def readMinimalPheno(params,data):
 
 def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
-    #this function currently creates three variables, which are:
+    #this function currently creates four variables, which are:
     #received_disability_pension = Received disability pension
     #received_pension = Received any pension
+    #total_pension = Sum of pensions, indexed
     #total_income = Sum of labor income, pension and social benefits, indexed
     start = time()
     keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
@@ -150,6 +151,9 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
 
     received_disability_pension = [0 for i in range(len(data))]
     received_pension = [0 for i in range(len(data))]
+    #Note that since pension is read in first, total_income and total_pension
+    #are identical at this point, so the same array can be just copied as the
+    #total_pension column at the end
     total_income = [0.0 for i in range(len(data))]
 
     if params['OutputAge']=='T':
@@ -212,6 +216,9 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
     if 'total_income' in requested_features:
         data['total_income'] = total_income
         if params['OutputAge']=='T': data['total_income_OnsetAge'] = total_income_OnsetAge
+    if 'total_pension' in requested_features:
+        data['total_pension'] = data.loc[:,'total_income']
+        if params['OutputAge']=='T': data['total_pension_OnsetAge'] = data.loc[:,'total_income_OnsetAge']
     if 'received_pension' in requested_features:
         data['received_pension'] = received_pension
         if params['OutputAge']=='T': data['received_pension_OnsetAge'] = received_pension_OnsetAge
@@ -222,192 +229,12 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
     print("Pension data preprocessed in "+str(end-start)+" s")
     return data
                 
-def readPension_old(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
-    #Read in the variables from the pension registry
-    #this function currently creates three variables, which are:
-    #received_disability_pension = Received disability pension
-    #received_pension = Received any pension
-    #total_income = Sum of labor income, pension and social benefits, indexed
-    start = time()
-    keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
-    pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
-    #keep only rows corresponding to IDs in samples
-    pension = pension[pension['id'].isin(ID_set)]
-    #convert date strings to datetime
-    pension['apvm'] = pd.to_datetime(pension['apvm'])
-    pension['ppvm'] = pd.to_datetime(pension['ppvm'])
-
-    if params['ByYear']=='F':
-        received_disability_pension = []
-        received_pension = []
-        total_income = []
-        if params['OutputAge']=='T':
-            received_disability_pension_OnsetAge = []
-            received_pension_OnsetAge = []
-            total_income_OnsetAge = []
-        for index,row in samples.iterrows():
-            ID = row['FINREGISTRYID']
-            #get all pension info for this ID
-            pension_id = pension.loc[pension['id']==ID]
-            #go through each entry
-            if len(pension_id)<1:
-                received_disability_pension.append(0)
-                received_pension.append(0)
-                total_income.append(0)
-                if params['OutputAge']=='T':
-                    received_disability_pension_OnsetAge.append(np.nan)
-                    received_pension_OnsetAge.append(np.nan)
-                    total_income_OnsetAge.append(np.nan)
-                continue
-            else:
-                #only consider entries within the inclusion period of the individual
-                fu_start = row['start_of_followup']
-                fu_end = row['end_of_followup']
-                tot_pension = 0.0
-                disability = False
-                if params['OutputAge']=='T':
-                    OnsetAge_pension = np.nan
-                    OnsetAge_disability_pension = np.nan
-
-                for p_index,p_row in pension_id.iterrows():
-                    if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
-                    p_start = p_row['apvm']
-                    p_end = p_row['ppvm']
-                    if pd.isna(p_end): p_end = fu_end
-                    
-                    if p_end<fu_start or p_start>fu_end: continue
-                    if p_start<fu_start: p_start = fu_start
-                    if p_end>fu_end: p_end = fu_end
-
-                    if params['OutputAge']=='T':
-                        #save the first pension occurrence for each individual
-                        dob = row['date_of_birth']
-                        age = getOnsetAge(dob,p_start)
-                        if np.isnan(OnsetAge_pension): OnsetAge_pension = age
-                        #and first disability pension occurrence
-                        if not pd.isna(p_row['tksyy1']):
-                            if np.isnan(OnsetAge_disability_pension): OnsetAge_disability_pension = age
-                            elif age<OnsetAge_disability_pension: OnsetAge_disability_pension = age
-                    #add up the pension from range p_start -> p_end
-                    #corrected with the consumer price index
-                    for year in range(p_start.year,p_end.year+1):
-                        if year not in cpi: C = cpi[1972]
-                        else: C = cpi[year]
-                        if not pd.isna(p_row['ptma']): tot_pension += C*12*p_row['ptma']
-                        if not pd.isna(p_row['ltma']): tot_pension += C*12*p_row['ltma']
-                        if not pd.isna(p_row['jkma']):tot_pension += C*12*p_row['jkma']
-                    #correct the amount paid for first and last year
-                    if p_start.year not in cpi: C = cpi[1972]
-                    else: C = cpi[p_start.year]
-                    if not pd.isna(p_row['ptma']): tot_pension -= C*(p_start.month-1)*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): tot_pension -= C*(p_start.month-1)*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): tot_pension -= C*(p_start.month-1)*p_row['jkma']
-
-                    if p_end.year not in cpi: C = cpi[1972]
-                    else: C = cpi[p_end.year]
-                    
-                    if not pd.isna(p_row['ptma']): tot_pension -= C*(12-p_end.month)*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): tot_pension -= C*(12-p_end.month)*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): tot_pension -= C*(12-p_end.month)*p_row['jkma']
-                #save values of the final variables for the current ID
-                total_income.append(tot_pension)
-                if tot_pension>0: received_pension.append(1)
-                else: received_pension.append(0)
-                if disability: received_disability_pension.append(1)
-                else: received_disability_pension.append(0)
-
-                if params['OutputAge']=='T':
-                    total_income_OnsetAge.append(OnsetAge_pension)
-                    received_pension_OnsetAge.append(OnsetAge_pension)
-                    received_disability_pension_OnsetAge.append(OnsetAge_disability_pension)
-                    
-    elif params['ByYear']=='T':
-        #one entry per each year in output
-        received_disability_pension = [0 for i in range(len(data))]
-        received_pension = [0 for i in range(len(data))]
-        total_income = [0 for i in range(len(data))]
-        if params['OutputAge']=='T':
-            received_disability_pension_OnsetAge = [np.nan for i in range(len(data))]
-            received_pension_OnsetAge = [np.nan for i in range(len(data))]
-            total_income_OnsetAge = [np.nan for i in range(len(data))]
-        for p_index,p_row in pension.iterrows():
-            ID = p_row['id']
-            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-            fu_start = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
-            p_start = p_row['apvm']#.astype(datetime)
-            p_end = p_row['ppvm']#.astype(datetime)
-            if pd.isna(p_end): p_end = fu_end
-            #print("fu_start:")
-            #print(fu_start)
-            #print("fu_end:")
-            #print(fu_end)
-            #print("p_start:")
-            #print(p_start)
-            #print("p_end:")
-            #print(p_end)
-            if params['OutputAge']=='T':
-                #output also ages of onset
-                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['date_of_birth']
-            #iterate over each year covered by this entry
-            for year in range(p_start.year,p_end.year+1):
-                if year<(fu_start.year) or year>(fu_end.year): continue
-                #add up the  pension from year
-                #corrected with the consumer price index
-                disability = False
-                tot_pension = 0.0
-                
-                if params['OutputAge']=='T':
-                    if year==p_start.year: onset_date = p_start
-                    else: onset_date = datetime(year,1,1)
-                    OnsetAge = getOnsetAge(dob,onset_date)
-                if not pd.isna(p_row['tksyy1']): disability = True #ID has received disability pension
-                n_month = 12
-                if year==p_start.year: n_month = n_month-(p_start.month-1)
-                if year==p_end.year: n_month = n_month-(12-p_end.month)
-
-                if year not in cpi: C = cpi[1972]
-                else: C = cpi[year]
-                
-                if not pd.isna(p_row['ptma']): tot_pension += C*12*p_row['ptma']
-                if not pd.isna(p_row['ltma']): tot_pension += C*12*p_row['ltma']
-                if not pd.isna(p_row['jkma']): tot_pension += C*12*p_row['jkma']
-                #get the correct row index in the dataframe data
-                ind = data.iloc[data_ind_dict[(ID,year)]]#data.index[(data['FINREGISTRYID']==ID) & (data['year']==year)][0]
-                total_income[ind] += tot_pension
-                if tot_pension>0: received_pension[ind] = 1
-                
-                if tot_pension>0 and params['OutputAge']=='T':
-                    if np.isnan(total_income_OnsetAge[ind]):
-                        total_income_OnsetAge[ind] = OnsetAge
-                        received_pension_OnsetAge[ind] = OnsetAge
-                    elif total_income_OnsetAge[ind]>OnsetAge:
-                        total_income_OnsetAge[ind] = OnsetAge
-                        received_pension_OnsetAge[ind] = OnsetAge
-                    
-                if disability: received_disability_pension[ind] = 1
-                if disability and params['OutputAge']=='T':
-                    if np.isnan(received_disability_pension_OnsetAge[ind]): received_disability_pension_OnsetAge[ind] = OnsetAge
-                    elif received_disability_pension_OnsetAge[ind]>OnsetAge: received_disability_pension_OnsetAge[ind] = OnsetAge
-                    
-    #add the created variables as columns to the df data
-    if 'total_income' in requested_features:
-        data['total_income'] = total_income
-        if params['OutputAge']=='T': data['total_income_OnsetAge'] = total_income_OnsetAge
-    if 'received_pension' in requested_features:
-        data['received_pension'] = received_pension
-        if params['OutputAge']=='T': data['received_pension_OnsetAge'] = received_pension_OnsetAge
-    if 'received_disability_pension' in requested_features:
-        data['received_disability_pension'] = received_disability_pension
-        if params['OutputAge']=='T': data['received_disability_pension_OnsetAge'] = received_disability_pension_OnsetAge
-    end = time()
-    print("Pension data preprocessed in "+str(end-start)+" s")
-    return data
-
 def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the pension registry
-    #this function currently creates two variables, which are:
+    #this function currently creates three variables, which are:
     #received_labor_income = Received labor income
     #total_income = Sum of labor income, pension and social benefits, indexed
+    #total_labor_income = Sum of labor income, indexed
     start = time()
     keep_cols = ['id','vuosi','vuosiansio_indexed']
     income = pd.read_feather(params['IncomeFile'],columns=keep_cols)
@@ -445,9 +272,13 @@ def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,sampl
             if np.isnan(received_labor_income_OnsetAge[ind]): received_labor_income_OnsetAge[ind] = OnsetAge
             elif received_labor_income_OnsetAge[ind]>OnsetAge: received_labor_income_OnsetAge[ind] = OnsetAge
     #Add the new columns to data
-    data['total_income'] = data['total_income'].add(labor_income,axis='index')
-    data['received_labor_income'] = received_labor_income
-    if params['OutputAge']=='T': data['received_labor_income_OnsetAge'] = received_labor_income_OnsetAge
+    if 'total_income' in requested_features:
+        data['total_income'] = data['total_income'].add(labor_income,axis='index')
+    if 'total_labor_income' in requested_features:
+        data['total_labor_income'] = labor_income
+    if 'received_labor_income' in requested_features:
+        data['received_labor_income'] = received_labor_income
+        if params['OutputAge']=='T': data['received_labor_income_OnsetAge'] = received_labor_income_OnsetAge
 
     end = time()
     print('Income data read in in '+str(end-start)+" s")
@@ -658,9 +489,10 @@ def readBenefits_old(samples,data,params,requested_features,ID_set,data_ind_dict
 
 def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the social assistance registry
-    #this function currently creates two variables, which are:
+    #this function currently creates three variables, which are:
     #received_any_income_support = Received basic, actual, preventive or complementary income support
     #total_income = Sum of labor income, pension and social benefits, indexed
+    #total_benefits = sum of social benefits, indexed
     
     start = time()
     keep_cols = ['TNRO','TILASTOVUOSI','EHKAISEVA_TOIMEENTULOTUKI_EUR','PERUS_TOIMEENTULOTUKI_EUR','TAYD_TOIMEENTULOTUKI_EUR','KUNT_TOIMINTARAHA_EUR','KUNT_MATKAKORVAUS_EUR']
@@ -708,9 +540,13 @@ def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_
             elif received_any_income_support_OnsetAge[ind]>OnsetAge: received_any_income_support_OnsetAge[ind] = OnsetAge
 
     #add the newly preprocessed values to data
-    data['total_income'] = data['total_income'].add(support_income,axis='index')
-    data['received_any_income_support'] = received_any_income_support
-    if params['OutputAge']=='T': data['received_any_income_support_OnsetAge'] = received_any_income_support_OnsetAge
+    if 'total_income' in requested_features:
+        data['total_income'] = data['total_income'].add(support_income,axis='index')
+    if 'total_benefits' in requested_features:
+        data['total_benefits'] = support_income
+    if 'received_any_income_support' in requested_features:
+        data['received_any_income_support'] = received_any_income_support
+        if params['OutputAge']=='T': data['received_any_income_support_OnsetAge'] = received_any_income_support_OnsetAge
     
     end = time()
     print('Social assistance data read in in '+str(end-start)+" s")

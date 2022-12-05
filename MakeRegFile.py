@@ -57,7 +57,7 @@ def MakeRegFile():
     #########
     
     #This step can be skipped if no variables from pension registry are requested
-    pension_set = set(['received_disability_pension','received_pension','total_income'])
+    pension_set = set(['received_disability_pension','received_pension','total_income','total_pension'])
     if len(requested_features.intersection(pension_set))>0:
         data = readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Pension data read in.')
@@ -68,7 +68,7 @@ def MakeRegFile():
     ########
 
     #Skipped if no variables needing income information are requested
-    income_set = set(['total_income','received_labor_income'])
+    income_set = set(['total_income','received_labor_income','total_labor_income'])
     if len(requested_features.intersection(income_set))>0:
         data = readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Income data read in.')
@@ -92,7 +92,7 @@ def MakeRegFile():
     ###################
 
     #Skipped if no variables needing income information are requested
-    sa_set = set(['total_income','received_any_income_support'])
+    sa_set = set(['total_income','received_any_income_support','total_benefits'])
     if len(requested_features.intersection(sa_set))>0:
         data = readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Social assistance data read in.')
