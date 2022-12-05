@@ -5,6 +5,7 @@ import pandas as pd
 
 from datetime import datetime
 from time import time
+from collections import Counter
 
 def readConfig(filepath):
     #Reads in the configuration file.
@@ -568,20 +569,107 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
 def readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
     #Read in the variables from the FinRegistry pedigree
     #this function currently creates one variables, which is:
-    #children	Whether the individual has children.
+    #children = Whether the individual has children.
     
     start = time()
     keep_cols = ['ID','MOTHER_ID','FATHER_ID','Birth_Date']
-    pedigree = pd.read_csv(params['PedigreeFile'],usecols=keep_cols,sep=',')
+    pedigree = pd.read_csv(params['PedigreeFile'],usecols=keep_cols,sep='\t')
     #keep only rows corresponding to IDs in samples
     pedigree = pedigree[(pedigree['MOTHER_ID'].isin(ID_set)) | (pedigree['FATHER_ID'].isin(ID_set))]
     #convert date columns to datetime
     pedigree['Birth_Date'] = pd.to_datetime(pedigree['Birth_Date'])
+    #convert nans to empty strings
+    pedigree.fillna('',inplace=True)
     
-    print("Pedigree, number or data rows: "+str(len(marriage)))
+    print("Pedigree, number or data rows: "+str(len(pedigree)))
 
     #initialize the new column
     children = [0 for i in range(len(data))]
     if params['OutputAge']=='T': children_OnsetAge = [np.nan for i in range(len(data))]
 
+    father_ids = set(pedigree['FATHER_ID']).intersection(ID_set)
+    mother_ids = set(pedigree['MOTHER_ID']).intersection(ID_set)
+    #if the data is not requested on a yearly basis, create separate counters for fathers
+    #and mothers
+    if params['ByYear']=='F':
+        #first fathers
+        for ID in father_ids:
+            if len(ID)<1: continue
+            ind = data_ind_dict[ID]
+            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+            fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+            #get all children of ID born during the specified follow-up
+            pedigree_ID = pedigree.loc[(pedigree['FATHER_ID']==ID) & (pedigree['Birth_Date']>=fu_start) & (pedigree['Birth_Date']<=fu_end)]
+            children[ind] = len(pedigree_ID)
+            
+            if params['OutputAge']=='T' and len(pedigree_ID)>0:
+                #the pedigree file is sorted by the children's birth date
+                child_dob = pedigree_ID['Birth_Date'].iloc[0]
+                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+                OnsetAge = getOnsetAge(dob,child_dob)
+                children_OnsetAge[ind] = OnsetAge
+        #then mothers        
+        for ID in mother_ids:
+            if len(ID)<1: continue
+            ind = data_ind_dict[ID]
+            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+            fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+            #get all children of ID born during the specified follow-up
+            pedigree_ID = pedigree.loc[(pedigree['FATHER_ID']==ID) & (pedigree['Birth_Date']>=fu_start) & (pedigree['Birth_Date']<=fu_end)]
+            children[ind] = len(pedigree_ID)
+            
+            if params['OutputAge']=='T' and len(pedigree_ID)>0:
+                #the pedigree file is sorted by the children's birth date
+                child_dob = pedigree_ID['Birth_Date'].iloc[0]
+                dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+                OnsetAge = getOnsetAge(dob,child_dob)
+                children_OnsetAge[ind] = OnsetAge
+
+    if params['ByYear']=='T':
+        #Report an indicator of whether the ID has had a child for each year of follow-up
+
+        #first fathers
+        for ID in father_ids:
+            if len(ID)<1: continue
+            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+            fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+            if params['OutputAge']=='T': dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+            #get all children of ID born during the specified follow-up
+            pedigree_ID = pedigree.loc[(pedigree['FATHER_ID']==ID) & (pedigree['Birth_Date']>=fu_start) & (pedigree['Birth_Date']<=fu_end)]
+            #print(pedigree_ID)
+            for index,row in pedigree_ID.iterrows():
+                #print(index)
+                #print(row)
+                year = row['Birth_Date'].year
+                ind = data_ind_dict[(ID,year)]
+                children[ind] = 1
+                if params['OutputAge']=='T' and (not np.isnan(children_OnsetAge[ind])):
+                    #the pedigree file is sorted by the children's birth date
+                    child_dob = row['Birth_Date']
+                    OnsetAge = getOnsetAge(dob,child_dob)
+                    children_OnsetAge[ind] = OnsetAge
+
+        #then mothers
+        for ID in mother_ids:
+            if len(ID)<1: continue
+            fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+            fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+            if params['OutputAge']=='T': dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+            #get all children of ID born during the specified follow-up
+            pedigree_ID = pedigree.loc[(pedigree['MOTHER_ID']==ID) & (pedigree['Birth_Date']>=fu_start) & (pedigree['Birth_Date']<=fu_end)]
+            for index,row in pedigree_ID.iterrows():
+                year = row['Birth_Date'].year
+                ind = data_ind_dict[(ID,year)]
+                children[ind] = 1
+                if params['OutputAge']=='T' and (not np.isnan(children_OnsetAge[ind])):
+                    #the pedigree file is sorted by the children's birth date
+                    child_dob = row['Birth_Date']
+                    OnsetAge = getOnsetAge(dob,child_dob)
+                    children_OnsetAge[ind] = OnsetAge
+                    
+    #save the required variables as new columns
+    if 'children' in requested_features:
+        data['children'] = children
+        if params['OutputAge']=='T': data['children_OnsetAge'] = children_OnsetAge
+        
     return data

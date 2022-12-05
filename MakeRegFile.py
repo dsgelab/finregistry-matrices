@@ -39,7 +39,7 @@ def MakeRegFile():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_N=1000.csv','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'F','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp','MarriageHistoryFile':'/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_aviohist.txt.finreg_IDsp'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'test_samplelist_N=1000.csv','FeatureFile':'selected_variables_v1.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'F','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp','MarriageHistoryFile':'/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_aviohist.txt.finreg_IDsp','PedigreeFile':'/data/processed_data/dvv/dvv_pedigree_withfamid.20220501.tsv'}
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -115,7 +115,7 @@ def MakeRegFile():
     ##########
 
     #Skipped if no variables needing information about children are requested
-    ch_set = set(['number_of_children'])
+    ch_set = set(['children'])
     if len(requested_features.intersection(ch_set))>0:
         data = readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict)
         logging.info('Pedigree read in.')
