@@ -357,6 +357,7 @@ def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,sam
             #update the values
             new_cols[benefit_var][ind] = 1
             #and the onset ages if requested
+            print(new_cols.keys())
             if params['OutputAge']=='T':
                 dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
                 OnsetAge = getOnsetAge(dob,b_start)
@@ -382,8 +383,8 @@ def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,sam
                     if year==b_start.year: onset_date = b_start
                     else: onset_date = datetime(year,1,1)
                     OnsetAge = getOnsetAge(dob,onset_date)
-                    if np.isnan(data.iloc[ind][benefit_var+'_OnsetAge']): data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
-                    elif data.iloc[ind][benefit_var+'_OnsetAge']>OnsetAge: data.loc[ind,benefit_var+'_OnsetAge'] = OnsetAge
+                    if np.isnan(new_cols[benefit_var+'_OnsetAge'][ind]): new_cols[benefit_var+'_OnsetAge'][ind] = OnsetAge
+                    elif new_cols[benefit_var+'_OnsetAge'][ind]>OnsetAge: new_cols[benefit_var+'_OnsetAge'][ind] = OnsetAge
 
     #add the new columns
     for key in new_cols:
@@ -672,4 +673,94 @@ def readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict
         data['children'] = children
         if params['OutputAge']=='T': data['children_OnsetAge'] = children_OnsetAge
         
+    return data
+
+def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,samples_ind_dict):
+    #Read in the variables from the DVV living extended
+    #this function currently creates 13 variables, which are:
+    #zip_code = Zip code of place of residence
+    #urbanization_class = Urbanisation Class (1 or 2)
+    #urban_rural_class_code = Urban/Rural Class Code
+    #sparse_small_house_area = Sparse Small House Area (binary indicator)
+    #apartment_building_area = Apartment building Area (binary indicator)
+    #small_house_area = Small house Area (binary indicator)
+    #demographic_dependency_ratio = Demographic (or population) dependency ratio is the number of people aged under 15 and over 64 per hundred working-age people aged 15-64. The greater the number of children and/or retirement-age people, the higher the dependency ratio is. The source is Population Statistics, where the population consists of all people residing permanently within a geographical area (such as the whole country, region or sub-region). Those who according to the Population Information System are domiciled in Finland at the end of the year belong to the permanent resident population whatever their nationality, as do Finnish nationals temporarily residing abroad. Foreign nationals are domiciled in Finland if their stay is intended to last or has lasted at least twelve months. An asylum-seeker will not be granted a legal domicile until his/her application has been approved. Persons attached to foreign embassies, trade missions and consulates, as well as their family members and personal staff, are not counted among the resident population unless they are Finnish nationals. On the contrary, the Finnish staff of Finland's embassies and trade missions abroad and persons serving in the UN peacekeeping forces are counted among the resident population.
+    #economic_dependency_ratio = Economic dependency ratio gives the number of people who are outside the labour force or unemployed per hundred employed people. People who are unemployed or outside the labour force (retired people, children and those engaged in family duties) constitute the economically inactive population. The population is classified based on their principal activity into economically active and economically inactive population (the labour force comprises the employed and the unemployed). The classification is based on information about the individual's activity during the last week of the year. In register-based data collection, the individual's subjective view of their own activity does not receive the same weight as in survey-based data collection. An individual who works while studying may be classified as a student in a questionnaire survey, while in register-based data collection the individual will be classified as employed if the employment is reported to the register. Undeclared work is outside the register. However, it can be assumed that work that is not declared to the tax authorities is not reported in a questionnaire survey either.
+    #general_at_risk_of_poverty_rate_for_the_municipality = The indicator gives the percentage of persons living in households with low incomes in the total population of the geographical area. The risk-at-poverty threshold is set at 60% of each year's median equivalent disposable income of Finnish households (according to the adjusted OECD scale). Disposable income is calculated by adding together earned, entrepreneurial and property incomes and the income transfers received and by subtracting the income transfers paid. Equivalent income refers to all household members' combined disposable income divided by the total number of consumption units in the household. The statistics use the OECD's adjusted consumption unit scale, where the first adult of the household receives the weight 1, other over 13-year-olds receive the weight 0.5 and 0 to 13-year-olds receive the weight 0.3. Regional classification according to the latest statistical year.
+    #intermunicipal_net_migration_1000_inhabitants = The indicator gives intermunicipal net migration per thousand inhabitants. Population figures refer to mean population. Net migration is obtained by subtracting those leaving the region (out-migrants) from those moving to the region (in-migrants). Accordingly, net migration is positive if more people have moved to the region than left it. Migration between municipalities has been adjusted throughout the time series so that it correspond with the most recent regional divisions, i.e., migration between municipalities that have since merged has been eliminated from the figures. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland.
+    #sale_of_alcoholic_beverages_per_capita = The indicator describes the amount of alcoholic beverages sold at Alko stores and delivered to grocery stores, kiosks, service stations and licensed restaurants within the area of the municipality, as litres of pure alcohol per local inhabitant during year. It describes the documented consumption of alcohol per capita. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland.
+    #self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator =
+    #average_income_of_inhabitants = Average income of inhabitants (€) is the average annual income of inhabitants. (FROM: Statistics Finland 1km² dataset)
+    #median_income_of_inhabitants = Median income of inhabitants (€) is obtained by listing inhabitants by the amount of disposable monetary income. Median income is the income of the middle inhabitant. An equal number of inhabitants remain on both sides of the middle inhabitant. (FROM: Statistics Finland 1km² dataset)
+    
+    start = time()
+    #first read in the dvv_ext_core for individuals' information
+    keep_cols = ['FINREGISTRYID','Start_of_residence','End_of_residence','posti_alue','TaajamaLuo','Luokka','sparse_small_house_area','apartment_building_area','small_house_area','demographic_dependency_ratio','economic_dependency_ratio','general_at_risk_of_poverty_rate_for_the_municipality','intermunicipal_net_migration_1000_inhabitants','sale_of_alcoholic_beverages_per_capita_as_litres_of_pure_alcohol','self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator','hr_ktu','hr_mtu','pt_vakiy']
+    living = pd.read_csv(params['LivingExtendedFile'],usecols=keep_cols,sep=',',dtype={'posti_alue':str})
+    #remove entries for IDs that are not in the study population
+    living = living[living['FINREGISTRYID'].isin(ID_set)]
+    #convert date columns to datetime
+    living['Start_of_residence'] = pd.to_datetime(living['Start_of_residence'])
+    living['End_of_residence'] = pd.to_datetime(living['End_of_residence'])
+    #rename columns to output variables
+    rename_dict = {'posti_alue':'zip_code','TaajamaLuo':'urbanization_class','Luokka':'urban_rural_class_code','sale_of_alcoholic_beverages_per_capita_as_litres_of_pure_alcohol':'sale_of_alcoholic_beverages_per_capita','hr_ktu':'average_income_of_inhabitants','hr_mtu':'median_income_of_inhabitants','pt_vakiy':'permanent_residents_fraction'}
+    #These are the column names to merge to dataframe data
+    out_cols = ['FINREGISTRYID','zip_code','urbanization_class','urban_rural_class_code','sparse_small_house_area','apartment_building_area','small_house_area','demographic_dependency_ratio','economic_dependency_ratio','general_at_risk_of_poverty_rate_for_the_municipality','intermunicipal_net_migration_1000_inhabitants','sale_of_alcoholic_beverages_per_capita','self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator','average_income_of_inhabitants','median_income_of_inhabitants','permanent_residents_fraction']
+    living.rename(columns=rename_dict,inplace=True)
+    #sort the dataframe living by date in ascending order so that we can be sure the latest
+    #place of residence is the last one encountered for each ID
+    living.sort_values(inplace=True,by='Start_of_residence',ascending=True)
+    #Note that if selecting binary output, we will only report the latest entry for each ID
+    #create the new columns
+    new_cols = {}
+    for i in range(1,len(out_cols)): new_cols[out_cols[i]] = [j for j in range(len(data))]
+
+    if params['OutputAge']=='T':
+        #Add only one column, as all of the place of residence related variables
+        #have the same age of onset which corresponds to the date the person started
+        #living in their final address
+        zip_code_OnsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in living.iterrows():
+        ID = row['FINREGISTRYID']
+        living_start = row['Start_of_residence']
+        living_end = row['End_of_residence']
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
+        if params['OutputAge']=='T': dob = samples.iloc[samples_ind_dict[ID]]['date_of_birth']
+        #check if the person has lived in this address during the requested follow-up period
+        if living_start>fu_end: continue
+        elif living_end<fu_start: continue
+
+        #get the earliest age at which the person has lived in current address during their
+        #follow-up period
+        if fu_start>living_start: living_start = fu_start
+        
+        if params['ByYear']=='F':
+            data_ind = data_ind_dict[ID]
+            #add values from this row
+            for i in range(1,len(out_cols)): new_cols[out_cols[i]][data_ind] = row[out_cols[i]]
+            if params['OutputAge']=='T':
+                OnsetAge = getOnsetAge(dob,living_start)
+                zip_code_OnsetAge[data_ind] = OnsetAge
+        
+        elif params['ByYear']=='T':
+            if living_end>fu_end: living_end = fu_end
+            for year in range(living_start.year,living_end.year+1):
+                data_ind = data_ind_dict[(ID,year)]
+                #add values from this row
+                for i in range(1,len(out_cols)): new_cols[out_cols[i]][data_ind] = row[out_cols[i]]
+                if params['OutputAge']=='T':
+                    if year==living_start.year: start_date = living_start
+                    else: start_date = datetime(year,1,1)
+                    OnsetAge = getOnsetAge(dob,start_date)
+                    zip_code_OnsetAge[data_ind] = OnsetAge
+    #add the new columns to dataframe data
+    for i in range(1,len(out_cols)):
+        if out_cols[i] in requested_features: data[out_cols[i]] = new_cols[out_cols[i]]
+    if params['OutputAge']=='T': data['zip_code_OnsetAge'] = zip_code_OnsetAge
+
+    end = time()
+    print('DVV living extended variables preprocessed in '+str(end-start)+" s")
+    
     return data
