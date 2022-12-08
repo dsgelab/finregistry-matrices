@@ -702,6 +702,9 @@ def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,s
     #convert date columns to datetime
     living['Start_of_residence'] = pd.to_datetime(living['Start_of_residence'])
     living['End_of_residence'] = pd.to_datetime(living['End_of_residence'])
+    #fill missing end dates of residence with today, assuming missing end date means
+    #that the residence still continues in this address
+    living['End_of_residence'] = living['End_of_residence'].fillna(datetime.now())
     #rename columns to output variables
     rename_dict = {'posti_alue':'zip_code','TaajamaLuo':'urbanization_class','Luokka':'urban_rural_class_code','sale_of_alcoholic_beverages_per_capita_as_litres_of_pure_alcohol':'sale_of_alcoholic_beverages_per_capita','hr_ktu':'average_income_of_inhabitants','hr_mtu':'median_income_of_inhabitants','pt_vakiy':'permanent_residents_fraction'}
     #These are the column names to merge to dataframe data
@@ -713,7 +716,7 @@ def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,s
     #Note that if selecting binary output, we will only report the latest entry for each ID
     #create the new columns
     new_cols = {}
-    for i in range(1,len(out_cols)): new_cols[out_cols[i]] = [j for j in range(len(data))]
+    for i in range(1,len(out_cols)): new_cols[out_cols[i]] = [np.nan for j in range(len(data))]
 
     if params['OutputAge']=='T':
         #Add only one column, as all of the place of residence related variables
@@ -746,6 +749,8 @@ def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,s
         
         elif params['ByYear']=='T':
             if living_end>fu_end: living_end = fu_end
+            #if living_start is null, only mark residence for the living_end year
+            if pd.isnull(living_start): living_start = living_end
             for year in range(living_start.year,living_end.year+1):
                 data_ind = data_ind_dict[(ID,year)]
                 #add values from this row
