@@ -48,7 +48,7 @@ EndPtOutputBinary  <em> T/F </em>
 EndPtOutputAge <em> T/F </em>
 </pre>
 
-<em> `SampleFile` </em> is a **headless** file listing the samples you would like to include in the output. It should have four columns in the following order: *FINREGISTRYID*, *DateOfBirth for this sample*, *Lowerbound of record inclusion date for this sample*, *Upperbound of record inclusion date for this sample*. All dates should be in a `yyyy-mm-dd` format. The output will only include records for the sample happening between `Lowerbound date` - `Upperbound date`, including the two ends of the window. This allows each sample to have different inclusion periods. See below for a demo of this file 
+<em> `SampleFile` </em> is a **headless** file listing the samples you would like to include in the output. It should have four columns in the following order: *FINREGISTRYID*, *DateOfBirth for this sample*, *Lowerbound of record inclusion date for this sample*, *Upperbound of record inclusion date for this sample*. All dates should be in a `yyyy-mm-dd` format. The output will only include records for the sample happening between `Lowerbound date` - `Upperbound date`, including the two ends of the window. This allows each sample to have different inclusion periods. The program should be able to accept space, comma or tab separated file (Please let Zhiyu know if it doesn't). See below for a demo of this file 
 <pre>
 FRXXXXXX1 2001-01-01  2005-01-01  2020-12-31
 FRXXXXXX2 1991-02-05  2000-01-01  2015-12-31
