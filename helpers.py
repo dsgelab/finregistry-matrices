@@ -46,13 +46,22 @@ def getSamplesFeatures(params):
     samples['end_of_followup'] = pd.to_datetime(samples['end_of_followup'])
     samples['date_of_birth'] = pd.to_datetime(samples['date_of_birth'])
     #Read in sex from minimal phenotype file
-    mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
+    mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex','mother_tongue'])
     mpf = mpf[mpf['FINREGISTRYID'].isin(ID_set)]
-    #mpf['sex'] = mpf['sex'].astype('int') #This does not work for missing values...
-    samples =  samples.merge(mpf,how='left',on='FINREGISTRYID')
+    #one-hot encode mother tongues
+    mpf = pd.get_dummies(mpf,columns=['mother_tongue'])
 
-    if params['ByYear']=='F': data = samples[['FINREGISTRYID','sex']]
+    #rename mother tongue columns
+    mpf.rename(columns={'mother_tongue_fi':'mothertongue_fi','mother_tongue_sv':'mothertongue_swe','mother_tongue_ru':'mothertongue_rus','mother_tongue_other':'mothertongue_other'},inplace=True)
+    #mpf['sex'] = mpf['sex'].astype('int') #This does not work for missing values...
+    #samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
+
+    if params['ByYear']=='F':
+        data =  samples.merge(mpf,how='left',on='FINREGISTRYID')
+        samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
     elif params['ByYear']=='T':
+        samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
+        #mother tongues are not repeated for every year
         data_ind_dict = {}
         data = pd.DataFrame()
         IDs = []
