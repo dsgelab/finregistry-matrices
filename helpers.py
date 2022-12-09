@@ -62,7 +62,7 @@ def getSamplesFeatures(params):
     elif params['ByYear']=='T':
         samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
         #mother tongues are not repeated for every year
-        data_ind_dict = {}
+        data_ind_dict = {} #key = (FINREGISTRYID,start_of_followup,end_of_followup,year)
         data = pd.DataFrame()
         IDs = []
         years = []
@@ -79,7 +79,7 @@ def getSamplesFeatures(params):
                 #starts.append(row['start_of_followup'])
                 #ends.append(row['end_of_followup'])
                 years.append(year)
-                data_ind_dict[(row['FINREGISTRYID'],year)] = ind
+                data_ind_dict[(row['FINREGISTRYID'],row['start_of_followup'],row['end_of_followup'],year)] = ind
                 ind += 1
         data['FINREGISTRYID'] = IDs
         data['year'] = years
@@ -91,10 +91,14 @@ def getSamplesFeatures(params):
     #create a dictionary mapping the ID+year pairs to indices of dataframe data
     features = pd.read_csv(params['FeatureFile'])
     if params['ByYear']=='F':
-        data_ind_dict = dict(zip(list(data['FINREGISTRYID']),list(data.index)))
+        keys = [(row['FINREGISTRYID'],row['start_of_followup'],row['end_of_followup']) for index,row in data.iterrows()]
+        data_ind_dict = dict(zip(keys,list(data.index)))
+        samples_ind_dict = dict(zip(list(samples['FINREGISTRYID']),list(samples.index)))
+        #key = (FINREGISTRYID,start_of_followup,end_of_followup)
+        #value = corresponding index in dataframe data
         end = time()
         print("Data structures initialized in "+str(end-start)+" s")
-        return samples,features,data,ID_set,data_ind_dict,data_ind_dict
+        return samples,features,data,ID_set,data_ind_dict,samples_ind_dict
     elif params['ByYear']=='T':
         samples_ind_dict = dict(zip(list(samples['FINREGISTRYID']),list(samples.index)))
         end = time()
@@ -194,8 +198,8 @@ def readPension(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,
             if year==p_end.year: nmonths = p_end.month
 
             #get corresponding index in the dataframe data
-            if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
-            elif params['ByYear']=='F': ind = data_ind_dict[ID]
+            if params['ByYear']=='T': ind = data_ind_dict[(ID,fu_start,fu_end,year)]
+            elif params['ByYear']=='F': ind = data_ind_dict[(ID,fu_start,fu_end)]
 
             received_pension[ind] = 1#ID has received any pension
             if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = 1 #ID has received disability pension
@@ -264,15 +268,15 @@ def readIncome(samples,data,params,requested_features,ID_set,data_ind_dict,sampl
         ID = row['id']
         year = row['vuosi']
         
-        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['end_of_followup']
-        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']#samples.loc[samples['FINREGISTRYID']==ID].iloc[0]['start_of_followup']
+        fu_end = samples.iloc[samples_ind_dict[ID]]['end_of_followup']
+        fu_start = samples.iloc[samples_ind_dict[ID]]['start_of_followup']
         #if year is outside the follow-up for this ID, skip
         if year<fu_start.year or year>fu_end.year: continue
         income_value = row['vuosiansio_indexed']
         
         #update the values
-        if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
-        else: ind = data_ind_dict[ID]
+        if params['ByYear']=='T': ind = data_ind_dict[(ID,fu_start,fu_end,year)]
+        else: ind = data_ind_dict[(ID,fu_start,fu_end)]
         labor_income[ind] += income_value
         if income_value>0: received_labor_income[ind] = 1
         #and the onset ages if requested
@@ -362,7 +366,7 @@ def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,sam
         if b_end>fu_end: b_end = fu_end
         
         if params['ByYear']=='F':
-            ind = data_ind_dict[ID]
+            ind = data_ind_dict[(ID,fu_start,fu_end)]
             #update the values
             new_cols[benefit_var][ind] = 1
             #and the onset ages if requested
@@ -378,7 +382,7 @@ def readBenefits(samples,data,params,requested_features,ID_set,data_ind_dict,sam
             if np.isnan(b_start.year): continue
             if np.isnan(b_start.year) or np.isnan(b_end.year): continue
             for year in range(b_start.year,b_end.year+1):
-                ind = data_ind_dict[(ID,year)]
+                ind = data_ind_dict[(ID,fu_start,fu_end,year)]
                 #update the values
                 new_cols[benefit_var][ind] = 1
                 #and the onset ages if requested
@@ -439,8 +443,8 @@ def readSocialAssistance(samples,data,params,cpi,requested_features,ID_set,data_
         else: C = cpi[year]
         
         income_value = row['tot_income_support']*C #multiply with the consumer price index
-        if params['ByYear']=='T': ind = data_ind_dict[(ID,year)]
-        else: ind = data_ind_dict[ID]
+        if params['ByYear']=='T': ind = data_ind_dict[(ID,fu_start,fu_end,year)]
+        else: ind = data_ind_dict[(ID,fu_start,fu_end)]
         #update the values
         support_income[ind] += income_value
         if income_value>0: received_any_income_support[ind] = 1
@@ -510,7 +514,7 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
         if m_end>fu_end: m_end = fu_end
         
         if params['ByYear']=='F':
-            ind = data_ind_dict[ID]
+            ind = data_ind_dict[(ID,fu_start,fu_end)]
             #update the values
             #note that if a person has divorced, they must have been married or in a
             #registered partnership
@@ -537,14 +541,14 @@ def readMaritalStatus(samples,data,params,cpi,requested_features,ID_set,data_ind
             #follow-up period, they will only have married=0 entries for each year
 
             if m_start==marriage_date:
-                m_ind = data_ind_dict[(ID,marriage_date.year)]
+                m_ind = data_ind_dict[(ID,fu_start,fu_end,marriage_date.year)]
                 #update the values
                 #note that if a person has divorced, they must have been married or in a
                 #registered partnership
                 married[m_ind] = 1
                 #if divorce_date is not None:
                 if divorce_date==m_end:
-                    d_ind = data_ind_dict[(ID,divorce_date.year)]
+                    d_ind = data_ind_dict[(ID,fu_start,fu_end,divorce_date.year)]
                     divorced[d_ind] = 1
                 #and the onset ages if requested
                 if params['OutputAge']=='T':
@@ -615,10 +619,10 @@ def readPedigree(samples,data,params,cpi,requested_features,ID_set,data_ind_dict
             if child_dob<fu_start or child_dob>fu_end: continue
             
             if params['ByYear']=='F':
-                ind = data_ind_dict[ID]
+                ind = data_ind_dict[(ID,fu_start,fu_end)]
             elif params['ByYear']=='T':
                 year = child_dob.year
-                ind = data_ind_dict[(ID,year)]
+                ind = data_ind_dict[(ID,fu_start,fu_end,year)]
             children[ind] += 1
             if params['OutputAge']=='T':
                 #save the age at birth of first children during the follow-up
@@ -704,7 +708,7 @@ def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,s
         if fu_start>living_start: living_start = fu_start
         
         if params['ByYear']=='F':
-            data_ind = data_ind_dict[ID]
+            data_ind = data_ind_dict[(ID,fu_start,fu_end)]
             #add values from this row
             for i in range(1,len(out_cols)): new_cols[out_cols[i]][data_ind] = row[out_cols[i]]
             if params['OutputAge']=='T':
@@ -716,7 +720,7 @@ def readLiving(samples,data,params,cpi,requested_features,ID_set,data_ind_dict,s
             #if living_start is null, only mark residence for the living_end year
             if pd.isnull(living_start): living_start = living_end
             for year in range(living_start.year,living_end.year+1):
-                data_ind = data_ind_dict[(ID,year)]
+                data_ind = data_ind_dict[(ID,fu_start,fu_end,year)]
                 #add values from this row
                 for i in range(1,len(out_cols)): new_cols[out_cols[i]][data_ind] = row[out_cols[i]]
                 if params['OutputAge']=='T':
