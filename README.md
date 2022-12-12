@@ -2,7 +2,14 @@
 
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
-**All examples appear below are hypothetical and do not contain any real data**
+**Now allows to output multiple records per individual!**
+The same individual can appear for multiple times in your `SampleFile`, with different dates for inclusion periods. The program will output for each inclusion period, each individual, with the first column as `FINREGISTRYID`, followed by `LowerAge` and `UpperAge` indicating the lower and upper bound of inclusion period in terms of individual's age. The output will be sorted by the these three columns in the same order. The program code allows you to have at max 20 differnet inclusion periods for each individual in your `SampleFile`. If that is not enough, you can expand it by changing
+<pre>
+#define MaxRec 20 
+</pre>
+to a larger number in row 12 of the source code and recompile :D
+
+*All examples appear below are hypothetical and do not contain any real data*
 
 Now you can use one single parameter file that looks like below to run both wide endpoint generator and wide drug generator. In this case, some parameters will be shared between the two programs. Using separate parameter files still works if you prefer. Please see below for more details. 
 
@@ -68,7 +75,7 @@ FRXXXXX10 1997-04-11  2001-04-01  2020-12-31
 
 <em> `EndPtList` </em> is a **headless** file with one column listing the endpoints you would like to include. The program will look for **exact** match of enpoint names in the longitudinal file from the `ENDPOINT` column. 
 
-<em> `PadNoEvent` </em> is a boolean with which you specify if you want the samples with no events within the inclusion period to be padded with 0s. Please input **T** or **F**. **F** means that the output will only include rows with at least one non-zero. An example for the `SampleFile` above, say if individual <em>FRXXXXXX2</em> does not have any endpoints within the given `EndPtList` during his inclusion period <em>2000-01-01</em> to <em>2015-12-31</em>, under the default **F** for `PadNoEvent`, the output will not include the coresponding row, ie as below: 
+<em> `PadNoEvent` </em> is a boolean with which you specify if you want the samples with no events within the inclusion period to be padded with 0s. This parameter works for both endpoint and drug file generator. Please input **T** or **F**. **F** means that the output will only include rows with at least one non-zero. An example for the `SampleFile` above, say if individual <em>FRXXXXXX2</em> does not have any endpoints within the given `EndPtList` during his inclusion period <em>2000-01-01</em> to <em>2015-12-31</em>, under the default **F** for `PadNoEvent`, the output will not include the coresponding row, ie as below: 
 <pre>
 FINREGISTRYID  Endpt1  EndPt2  Endpt3  ...
 FRXXXXXX1  xx  xx  xx  ...
