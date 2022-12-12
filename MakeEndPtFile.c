@@ -9,6 +9,7 @@
 #define MaxFeature 5000
 #define FeatureLen 100
 #define IDandTimeLen 15
+#define MaxRec 20 // allow same individual having multiple record, with different time period
 
 char buffer[100000];
 char InLongFile[10000];
@@ -19,20 +20,21 @@ int ByYear; // 0 -- no, 1 -- yes, default no
 int WithBinary;
 int WithNEvent;
 int WithAge; // 0 -- no, 1 -- yes, default no
+int Pad; // 0 -- no, 1 -- yes, default no
 int SampleIncFlag, RecordIncFlag; // Inclusion flags
-
 int iFeature;
 int iSample[2];
-int * SampleFeature;
-double * SampleOnsetAge;
+int * SampleFeature[MaxRec];
+double * SampleOnsetAge[MaxRec];
 char * SampleEventTime[MaxFeature];
 
 struct SampleInfo {
    char FINREGISTRYID[IDandTimeLen];
    time_t DateOfBirth;
-   double lower;
-   double upper; // upper and lower bound for age/year cutoff
-};  
+   double lower[MaxRec];
+   double upper[MaxRec]; // upper and lower bound for age/year cutoff
+   int nRec;
+} NullSample = {.nRec = 0};
 typedef struct SampleInfo Sample;
 Sample SampleList[nSampleBin][MaxSamplePerBin];
 char *FeatureList[MaxFeature];
@@ -74,6 +76,7 @@ char *YearDiffToDate(time_t Time1, double YearDiff) {
 
 void ReadParam(const char *ParamFile) {
 	ByYear = 0;
+	Pad = 0;
 	WithAge = 0;
 	WithBinary = 0;
 	WithNEvent = 0;
@@ -143,6 +146,15 @@ void ReadParam(const char *ParamFile) {
 					else
 						printf("EndPtOutputAge: T/F. Using default false.\n");
 				}
+				else if (strcmp(tok, "PadNoEvent") == 0) {
+					tok = strtok_r(p, " \t\n", &p);
+					if (strcmp(tok, "T") == 0)
+						Pad = 1;
+					else if (strcmp(tok, "F") == 0)
+						Pad = 0;
+					else
+						printf("PadNoEvent: T/F. Only possible with EndPtByYear = F. Using default false.\n");
+				}
 	    	}
 		}
 	}
@@ -152,13 +164,17 @@ void ReadParam(const char *ParamFile) {
 		fflush(stdout);
 		exit(0);
 	}
+	if ((ByYear == 1) && (Pad == 1)) {
+		printf("Padding only possible without output by year. Disabled.\n");
+		Pad = 0;
+	}
 } // read parameter file
-
 
 void ReadList() {
 	char *tok; char *p;
 	char tmpDOB[IDandTimeLen];
-	long int i;
+	long int i; int j, k;
+	double tmpLower; double tmpUpper;
 	
 	FILE *Sample;
 	long int ID;
@@ -175,22 +191,45 @@ void ReadList() {
 			tok = strtok_r(p, " ,\t\n", &p);
 			ID = atoi(tok + 2);
 			bin = (int)floor(ID/MaxSamplePerBin);
-			index = ID % MaxSamplePerBin;
-			strcpy(SampleList[bin][index].FINREGISTRYID, tok);
+			index = ID % MaxSamplePerBin;		
+			if (!SampleList[bin][index].nRec) {
+				strcpy(SampleList[bin][index].FINREGISTRYID, tok);
+			}
 			tok = strtok_r(p, " ,\t\n", &p);
 			strcpy(tmpDOB, tok);
-			SampleList[bin][index].DateOfBirth = MakeTime(tmpDOB);
+			if (!SampleList[bin][index].nRec) {
+				SampleList[bin][index].DateOfBirth = MakeTime(tmpDOB);
+				if (SampleList[bin][index].DateOfBirth != MakeTime(tmpDOB))
+					printf("Different date of birth for %s, using the last one.\n", SampleList[bin][index].FINREGISTRYID);
+			}
 			tok = strtok_r(p, " ,\t\n", &p);
 			strcpy(tmpDOB, tok);
-			SampleList[bin][index].lower = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
+			tmpLower = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
+			k = 0;
+			while (tmpLower>SampleList[bin][index].lower[k] && k<SampleList[bin][index].nRec)
+				k++;
 			tok = strtok_r(p, " ,\t\n", &p);
 			strcpy(tmpDOB, tok);
-			SampleList[bin][index].upper = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
+			tmpUpper = TimeDiffYear(SampleList[bin][index].DateOfBirth, MakeTime(tmpDOB));
+			while (tmpLower==SampleList[bin][index].lower[k] && tmpUpper>SampleList[bin][index].upper[k] && k<SampleList[bin][index].nRec)
+				k++;
+			for (j = SampleList[bin][index].nRec; j >= k; j--) {
+				SampleList[bin][index].lower[j+1] = SampleList[bin][index].lower[j];
+				SampleList[bin][index].upper[j+1] = SampleList[bin][index].upper[j];
+			}
+			SampleList[bin][index].lower[k] = tmpLower;
+			SampleList[bin][index].upper[k] = tmpUpper;	
+			if (SampleList[bin][index].nRec <= MaxRec)
+				SampleList[bin][index].nRec += 1;
+			else {
+				printf("Increase MaxRes per sample!\n");
+				exit(0);
+			}
 			i += 1;
 		}
 	}
 	nSample = i;
-	printf("Loading sample list, done. Including %ld samples.\n", nSample);
+	printf("Loading sample list, done. Including %ld records.\n", nSample);
 	fflush(stdout);
 	fclose(Sample);
 
@@ -218,13 +257,12 @@ void ReadList() {
 } // read sample list and feature list 
 
 
-int SampleIsIn(char FinRegID[IDandTimeLen]) {
-	long int ID;
+int SampleIsIn(long int ID) {
+	char FinRegID[15];
 	int bin, index;
-	ID = atoi(FinRegID + 2);
 	bin = (int)floor(ID/MaxSamplePerBin);
 	index = ID % MaxSamplePerBin;
-	if (strcmp(FinRegID, SampleList[bin][index].FINREGISTRYID) == 0) {
+	if (ID == atoi(SampleList[bin][index].FINREGISTRYID + 2)) {
 		iSample[0] = bin;
 		iSample[1] = index;
 		return(1);
@@ -254,6 +292,7 @@ int FeatureIsIn(char Feature[FeatureLen]) {
     return(-1);
 }
 
+
 int Include(double tmpAge, double lower, double upper) {
 	return( ((tmpAge >= lower) && (tmpAge <= upper)) ? 1 : 0);
 }
@@ -261,70 +300,80 @@ int Include(double tmpAge, double lower, double upper) {
 
 void ResetRecordInfo() {
 	int k;
-	memset(SampleFeature, 0, sizeof(int) * nFeature);
-	if (WithAge == 1)
-		memset(SampleOnsetAge, 0.0, sizeof(double) * nFeature);
+	for (k = 0; k < MaxRec; k ++) {
+		memset(SampleFeature[k], 0, sizeof(int) * nFeature);
+		if (WithAge == 1)
+			memset(SampleOnsetAge[k], 0.0, sizeof(double) * nFeature);
+	}
 	RecordIncFlag = 0;
 }
 
 
-void UpdateRecordInfo(int iFeature, double tmpAge, time_t SampleDOB) {
-	if ( (WithAge == 1) && (SampleFeature[iFeature] == 0) )
-		SampleOnsetAge[iFeature] = tmpAge;
-	SampleFeature[iFeature] += 1;
+void UpdateRecordInfo(int m, int iFeature, double tmpAge, time_t SampleDOB) {
+	if ( (WithAge == 1) && (SampleFeature[m][iFeature] == 0) )
+		SampleOnsetAge[m][iFeature] = tmpAge;
+	SampleFeature[m][iFeature] += 1;
 	RecordIncFlag = 1;
 }
 
 
-void WriteOutput(char SampleID[IDandTimeLen], int SampleYear) {
-	int k;
+void WriteOutput(long int bin, long int index, int SampleYear) {
+	int i, k, nRec;
+	char SampleID[IDandTimeLen];
+	double lower; double upper;
 	FILE *OutPut;
 	OutPut = fopen(OutFile, "a");
+	strcpy(SampleID, SampleList[bin][index].FINREGISTRYID);
+	nRec = SampleList[bin][index].nRec;
+	for (i = 0; i < nRec; i++) {
+		lower = SampleList[bin][index].lower[i];
+		upper = SampleList[bin][index].upper[i];
+		if (ByYear == 1) 
+			fprintf(OutPut, "%s\t%.2f\t%.2f\t%d\t", SampleID, lower, upper, SampleYear);
+		else 
+			fprintf(OutPut, "%s\t%.2f\t%.2f\t", SampleID, lower, upper);
 
-	if (ByYear == 1) 
-		fprintf(OutPut, "%s\t%d\t", SampleID, SampleYear);
-	else 
-		fprintf(OutPut, "%s\t", SampleID);
-
-	if (WithBinary + WithNEvent == 1) {
-		if ((WithBinary == 1) && (WithNEvent == 0)) {
-			for (k = 0; k < nFeature; k++) 
-				SampleFeature[k] = (SampleFeature[k] > 0.0 ? 1 : 0);
-		}
-		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%d\t", SampleFeature[k]);
-		if (WithAge == 1) {
-			fprintf(OutPut, "%d\t", SampleFeature[nFeature-1]);
+		if (WithBinary + WithNEvent == 1) {
+			if ((WithBinary == 1) && (WithNEvent == 0)) {
+				for (k = 0; k < nFeature; k++) 
+					SampleFeature[i][k] = (SampleFeature[i][k] > 0.0 ? 1 : 0);
+			}
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
-			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
+				fprintf(OutPut, "%d\t", SampleFeature[i][k]);
+			if (WithAge == 1) {
+				fprintf(OutPut, "%d\t", SampleFeature[i][nFeature-1]);
+				for (k = 0; k < nFeature-1; k++) 
+					fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+				fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
+			}
+			else
+				fprintf(OutPut, "%d\n", SampleFeature[i][nFeature-1]);
 		}
-		else
-			fprintf(OutPut, "%d\n", SampleFeature[nFeature-1]);
-	}
-	else if ((WithBinary == 1) && (WithNEvent == 1)) {
-		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%d\t%d\t", SampleFeature[k], (SampleFeature[k] > 0.0 ? 1 : 0));
-		if (WithAge == 1) {
-			fprintf(OutPut, "%d\t%d\t", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] > 0.0 ? 1 : 0));
+		else if ((WithBinary == 1) && (WithNEvent == 1)) {
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
-			fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
+				fprintf(OutPut, "%d\t%d\t", SampleFeature[i][k], (SampleFeature[i][k] > 0.0 ? 1 : 0));
+			if (WithAge == 1) {
+				fprintf(OutPut, "%d\t%d\t", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
+				for (k = 0; k < nFeature-1; k++) 
+					fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+				fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
+			}
+			else
+				fprintf(OutPut, "%d\t%d\n", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
 		}
-		else
-			fprintf(OutPut, "%d\t%d\n", SampleFeature[nFeature-1], (SampleFeature[nFeature-1] > 0.0 ? 1 : 0));
-	}
-	else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
-		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%.2f\t", ((SampleFeature[k] > 0.0) ? SampleOnsetAge[k] : -9.0));
-		fprintf(OutPut, "%.2f\n", ((SampleFeature[nFeature-1] > 0.0) ? SampleOnsetAge[nFeature-1] : -9.0));
+		else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
+			for (k = 0; k < nFeature-1; k++) 
+				fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+			fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
+		}
 	}
 	fclose(OutPut);
 }
 
 
 int main(int argc, char const *argv[]) {
-	int nID = -1; char tmpID[IDandTimeLen]; char SampleID[IDandTimeLen];
+	int nID = -1; char tmpID[IDandTimeLen]; char SampleID[IDandTimeLen]; long int tmpIDcnt; 
+	long int FinRegIDcnt; // char tmpID[IDandTimeLen];
 	int nAge = -1; double tmpAge = 0; double SampleAge = 0;
 	int nYear = -1; int tmpYear = 0; int SampleYear = 0;
 	int nEndPt = -1; char tmpEndPt[FeatureLen]; char SampleEndPt[FeatureLen];
@@ -334,18 +383,29 @@ int main(int argc, char const *argv[]) {
 	char *tok; char *p;
 	long int rCnt;
 
+	long int m,n;
+	for (m = 0; m < nSampleBin; m++) {
+		for (n = 0; n < MaxSamplePerBin; n++)
+			SampleList[m][n] = NullSample;
+	}
+
 	ReadParam(argv[1]);
 	printf("Read parameters, done\n");
 	fflush(stdout);
 	ReadList();
 
-	SampleFeature = malloc(sizeof(int) * nFeature);
-	if (SampleFeature == NULL)
-		printf("SampleFeature memory allocation failed.\n");
+	for (m = 0; m < MaxRec; m++) {
+		SampleFeature[m] = malloc(sizeof(int) * nFeature);
+		if (SampleFeature[m] == NULL)
+			printf("SampleFeature memory allocation failed.\n");
+	}
+
 	if (WithAge == 1) {
-		SampleOnsetAge = malloc(sizeof(double) * nFeature);
-		if (SampleOnsetAge == NULL)
-			printf("SampleOnsetAge memory allocation failed.\n");
+		for (m = 0; m < MaxRec; m++) {
+			SampleOnsetAge[m] = malloc(sizeof(double) * nFeature);
+			if (SampleOnsetAge[m] == NULL)
+				printf("SampleOnsetAge memory allocation failed.\n");
+		}
 	}
 	ResetRecordInfo();
 	SampleIncFlag = 0;
@@ -357,9 +417,9 @@ int main(int argc, char const *argv[]) {
         exit(0);
     }
     if (ByYear == 1)
-		fprintf(OutPut, "FINREGISTRYID\tYear\t");
+		fprintf(OutPut, "FINREGISTRYID\tLowerAge\tUpperAge\tYear\t");
 	else 
-		fprintf(OutPut, "FINREGISTRYID\t");
+		fprintf(OutPut, "FINREGISTRYID\tLowerAge\tUpperAge\t");
 
 	if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
@@ -439,6 +499,9 @@ int main(int argc, char const *argv[]) {
 			printf("Requested output by year, but no EVENT_YEAR column.\n");
 			exit(0);
 		}
+
+		FinRegIDcnt = 0;
+
 		while (fgets(buffer, sizeof(buffer), LongEndPt) != NULL) {
 			p = buffer;
 			i = 0;
@@ -453,39 +516,59 @@ int main(int argc, char const *argv[]) {
 					strcpy(tmpEndPt, tok);
 				i += 1;
 			}
-			// printf("%s, %d, %lf, %s; Sample %s (%lf-%lf), SampleIncFlag = %d, RecordIncFlag = %d\n", tmpID, tmpYear, tmpAge, tmpEndPt, SampleID, SampleLower, SampleUpper, SampleIncFlag, RecordIncFlag);
-			// fflush(stdout);
 
 			if ( (strcmp(tmpID, SampleID) == 0) && (SampleIncFlag == 1) ) { // check if same as previous INCLUDED sample
 				if ((tmpYear != SampleYear) && (ByYear == 1) && (RecordIncFlag == 1)) { // if output by year and the event year is different from existing record
-					WriteOutput(SampleID, SampleYear); // write existing record if necessary
+					WriteOutput(iSample[0], iSample[1], SampleYear); // write existing record if necessary
 					ResetRecordInfo(); // starting new record
 				}
 				SampleYear = tmpYear;
-				if ( Include(tmpAge, SampleLower, SampleUpper) == 1 ) { // check if to be considered given the event time
-					iFeature = FeatureIsIn(tmpEndPt); // check if the endpoint is in the list
-					if (iFeature != -1)  // update vector if feature is included, do nothing if not
-						UpdateRecordInfo(iFeature, tmpAge, SampleDOB); // update the existing record with current observation
-				} // do nothing if the event time is out of the window
-			}
-			else if (strcmp(tmpID, SampleID) != 0) { // if the observation is for different sample
-				if ((RecordIncFlag == 1) && (SampleIncFlag == 1)) {
-					WriteOutput(SampleID, SampleYear); // output existing record if necessary
-					ResetRecordInfo(); // starting new record
-				}
-				strcpy(SampleID, tmpID);
-				SampleYear = tmpYear;
-				SampleIncFlag = SampleIsIn(SampleID);
-				if (SampleIncFlag == 1) { // proceed only if the sample is to be included
-					strcpy(SampleID, SampleList[iSample[0]][iSample[1]].FINREGISTRYID);
-					SampleLower = SampleList[iSample[0]][iSample[1]].lower;
-					SampleUpper = SampleList[iSample[0]][iSample[1]].upper;
-					SampleDOB = SampleList[iSample[0]][iSample[1]].DateOfBirth;
+
+				for (m = 0; m < SampleList[iSample[0]][iSample[1]].nRec; m++) {
+					SampleLower = SampleList[iSample[0]][iSample[1]].lower[m];
+					SampleUpper = SampleList[iSample[0]][iSample[1]].upper[m];
 					if ( Include(tmpAge, SampleLower, SampleUpper) == 1 ) { // check if to be considered given the event time
 						iFeature = FeatureIsIn(tmpEndPt); // check if the endpoint is in the list
-						if (iFeature != -1) // update vector if feature is included, do nothing if not
-							UpdateRecordInfo(iFeature, tmpAge, SampleDOB); // update the existing record with current observation
+						if (iFeature != -1)  { // update vector if feature is Included, do nothing if not
+							UpdateRecordInfo(m, iFeature, tmpAge, SampleDOB); // update the existing record with current observation
+						}
 					} // do nothing if onset time out of range
+				} // Loop for all time period required for this sample
+
+			}
+			else if (strcmp(tmpID, SampleID) != 0) { // if the observation is for different person
+				if (SampleIncFlag == 1) {
+					if (((RecordIncFlag == 1) && (ByYear == 1)) || !ByYear )
+						WriteOutput(iSample[0], iSample[1], SampleYear); // output existing record if necessary
+				}
+				ResetRecordInfo(); // starting new record
+
+				tmpIDcnt = atoi(tmpID + 2);
+				if (Pad == 1) {
+					FinRegIDcnt += 1;
+					while (tmpIDcnt > FinRegIDcnt) {
+						if (SampleIsIn(FinRegIDcnt)) {
+							WriteOutput(iSample[0], iSample[1], 0);
+						}
+						FinRegIDcnt += 1;
+					}
+				}
+
+				strcpy(SampleID, tmpID);
+				SampleYear = tmpYear;
+				SampleIncFlag = SampleIsIn(tmpIDcnt);
+				if (SampleIncFlag == 1) { // proceed only if the sample is to be included
+					strcpy(SampleID, SampleList[iSample[0]][iSample[1]].FINREGISTRYID);
+					SampleDOB = SampleList[iSample[0]][iSample[1]].DateOfBirth;
+					for (m = 0; m < SampleList[iSample[0]][iSample[1]].nRec; m++) {
+						SampleLower = SampleList[iSample[0]][iSample[1]].lower[m];
+						SampleUpper = SampleList[iSample[0]][iSample[1]].upper[m];
+						if ( Include(tmpAge, SampleLower, SampleUpper) == 1 ) { // check if to be considered given the event time
+							iFeature = FeatureIsIn(tmpEndPt); // check if the endpoint is in the list
+							if (iFeature != -1) // update vector if feature is included, do nothing if not
+								UpdateRecordInfo(m, iFeature, tmpAge, SampleDOB); // update the existing record with current observation
+						} // do nothing if onset time out of range
+					} // Loop for all time period required for this sample
 				} // do nothing if sample is not in the list
 			} // do nothing if same sample as previous but not to be included
 			rCnt += 1;
@@ -497,5 +580,6 @@ int main(int argc, char const *argv[]) {
 	}
 	fclose(LongEndPt);
 	if ((RecordIncFlag == 1) && (SampleIncFlag == 1))
-		WriteOutput(SampleID, SampleYear);
+		WriteOutput(iSample[0], iSample[1], SampleYear);
 }
+
