@@ -7,7 +7,7 @@ The same individual can appear for multiple times in your `SampleFile`, with dif
 <pre>
 #define MaxRec 20 
 </pre>
-to a larger number in row 12 of the source code and recompile :D
+to a larger number in row 12/13 of the source codes and recompile :D
 
 *All examples appear below are hypothetical and do not contain any real data*
 
