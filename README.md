@@ -3,7 +3,7 @@
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
 **Now allows to output multiple records per individual!**
-The same individual can appear for multiple times in your `SampleFile`, with different dates for inclusion periods. The program will output for each inclusion period, each individual, with the first column as `FINREGISTRYID`, followed by `LowerAge` and `UpperAge` indicating the lower and upper bound of inclusion period in terms of individual's age. The output will be sorted by the these three columns in the same order. The program code allows you to have at max 20 differnet inclusion periods for each individual in your `SampleFile`. If that is not enough, you can expand it by changing
+The same individual can appear for multiple times in your `SampleFile`, with different dates for inclusion periods. The program will output for each inclusion period, each individual, with the first column as `FINREGISTRYID`, followed by `LowerAge` and `UpperAge` indicating the lower and upper bound of inclusion period in terms of individual's age. The output will be sorted by the these three columns in the same order. The program code allows you to have at max 20 different inclusion periods for each individual in your `SampleFile`. If that is not enough, you can also expand it by changing
 <pre>
 #define MaxRec 20 
 </pre>
