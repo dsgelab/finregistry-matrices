@@ -67,7 +67,6 @@ def getSamplesFeatures(params):
             else: data_ind_dict[ID].append(index)
             
     elif params['ByYear']=='T':
-        #NOTE! DATA_IND_DICT NEEDS TO BE FIXED HERE!
         samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
         #mother tongues are not repeated for every year
         data_ind_dict = {} #key = (FINREGISTRYID,year), value = [list of indices for this ID]
@@ -780,6 +779,10 @@ def readLiving(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #These are the column names to merge to dataframe data
     out_cols = ['FINREGISTRYID','zip_code','urbanization_class','urban_rural_class_code','sparse_small_house_area','apartment_building_area','small_house_area','demographic_dependency_ratio','economic_dependency_ratio','general_at_risk_of_poverty_rate_for_the_municipality','intermunicipal_net_migration_1000_inhabitants','sale_of_alcoholic_beverages_per_capita','self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator','average_income_of_inhabitants','median_income_of_inhabitants','permanent_residents_fraction']
     living.rename(columns=rename_dict,inplace=True)
+    #NOTE! Some information attached to a geographic location was not provided in the source
+    #register due to there being too few inhabintants in the area, these values are marked
+    #with -1 and here we just consider them missing values
+    living.replace(to_replace=-1,value=np.nan,inplace=True)
     #sort the dataframe living by date in ascending order so that we can be sure the latest
     #place of residence is the last one encountered for each ID
     living.sort_values(inplace=True,by='Start_of_residence',ascending=True)
@@ -860,3 +863,99 @@ def readLiving(data,params,cpi,requested_features,ID_set,data_ind_dict):
     print('DVV living extended variables preprocessed in '+str(end-start)+" s")
     
     return data
+
+def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
+    #Read in the socioeconomic status variables from the SF Socioeconomic dataset
+    #this function currently creates one variable, which is:
+    #ses_self_employed = Socioeconomic status: self-employed
+    #ses_upperlevel = Socioeconomic status: Upper-level employees with administrative, managerial, professional and related occupations
+    #ses_lowerlevel = Socioeconomic status: Lower-level employees with administrative and clerical occupations
+    #ses_manual_workers = Socioeconomic status: manual workers
+    #ses_students = Socioeconomic status: students
+    #ses_pensioners = Socioeconomic status: pensioners
+    #ses_others	= Socioeconomic status: others
+    #ses_unknown = Socioeconomic status unknown
+    #NOTE: If socioeconomic status is missing, all of the above indicator variables are left empty (otherwise 1/0)
+    
+    start = time()
+    ses = pd.read_csv(params['SESFile'])
+    #keep only rows corresponding to IDs in samples
+    ses = ses[ses['FINREGISTRYID'].isin(ID_set)]
+    #convert column data types
+    ses['vuosi'] = ses['vuosi'].astype(int)
+    ses['psose'] = ses['psose'].astype(str)
+    ses['sose'] = ses['sose'].astype(str)
+    ses.rename(columns={'vuosi':'year'},inplace=True)
+    #sort the values by year to be certain the newest entry for each ID is read in last
+    ses.sort_values(by='year',inplace=True)
+    
+    print("Socioeconomic status, number or data rows: "+str(len(ses)))
+
+    ses_names = {'1':'ses_self_employed','3':'ses_upperlevel','4':'ses_lowerlevel','5':'ses_manual_workers','6':'ses_students','7':'ses_pensioners','8':'ses_others','9':'ses_unknown','NaN':'ses_missing'}
+    #map both socioeconomic columns into the proposed format
+    psose_map = {'11':'1','12':'1','21':'1','22':'1','3':'3','31':'3','32':'3','33':'3','34':'3','4':'4','41':'4','42':'4','43':'4','44':'4','5':'5','51':'5','52':'5','53':'5','54':'5','7':'6','70':'6','6':'7','91':'8','92':'8','93':'8','94':'8','99':'9'}
+    #sose maps
+    sose_map = {'10':'1','11':'1','12':'1','20':'1','21':'1','22':'1','23':'1','24':'1','29':'1','31':'3','32':'3','33':'3','34':'3','39':'3','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','51':'5','52':'5','53':'5','54':'5','59':'5','60':'6','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','81':'8','82':'8','91':'8','92':'8','X':'9','99':'9','na':'NaN'}
+
+    #create new columns
+    #latest socioeconomic status (within the specified follow-up) for each row in SamplesList
+    ses_status = ['NaN' for i in range(len(data))]
+    #only one variable to capture the onset age
+    ses_OnsetAge = [np.nan for i in range(len(data))]
+    for index,row in ses.iterrows():
+        ID = row['FINREGISTRYID']
+        year = row['year']
+        if params['ByYear']=='T':
+            key = (ID,year)
+            if key not in data_ind_dict: continue
+        elif params['ByYear']=='F': key = ID
+        
+        for ind in data_ind_dict[key]:
+            fu_end = data.iloc[ind]['end_of_followup']
+            fu_start = data.iloc[ind]['start_of_followup']
+            #skip if year is outside of follow-up for this entry in SamplesList
+            if year<fu_start.year or year>fu_end.year: continue
+            
+            if params['OutputAge']=='T': dob = data.iloc[ind]['date_of_birth']
+            old_code = ses_status[ind]
+            
+            if year<1990:
+                #code is psose
+                code = row['psose'].split('.')[0]
+                if len(code)>2: code = code[:2]
+                #do not replace a real code with missing value
+                if code=='na' and ses_status[ind]!='NaN': continue
+                ses_status[ind] = ses_names[psose_map[code]]
+            else:
+                #code is sose
+                code = row['sose'].split('.')[0]
+                if len(code)>2: code = code[:2]
+                #do not replace a real code with missing value
+                if code=='na' and ses_status[ind]!='NaN': continue
+                ses_status[ind] = ses_names[sose_map[code]]
+
+                #print(row)
+                #print(code)
+                #print(ses_status[ind])
+                #while True:
+                #    z = input('any')
+                #    break
+            #if onset age is requested
+            if params['OutputAge']=='T':
+                #if the socioeconomic status did not change from the last record,
+                #then we keep the first occurrence of the same socioeconomic status
+                #as the onset age
+                if old_code!=code:
+                    OnsetAge = getOnsetAge(dob,datetime(year,1,1))
+                    ses_OnsetAge[ind] = OnsetAge
+    #then add the new columns to dataframe data
+    #first one-hot encode the socioeconomic status variable
+    data['ses'] = ses_status
+    print(data)
+    print(data['ses'].value_counts())
+    data = pd.get_dummies(data,columns=['ses'])
+    #add the onset column if requested
+    if params['OutputAge']=='T': data['ses_OnsetAge'] = ses_OnsetAge
+
+    return data
+        
