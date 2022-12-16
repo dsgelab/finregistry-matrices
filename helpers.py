@@ -893,10 +893,12 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     ses_names = {'1':'ses_self_employed','3':'ses_upperlevel','4':'ses_lowerlevel','5':'ses_manual_workers','6':'ses_students','7':'ses_pensioners','8':'ses_others','9':'ses_unknown','NaN':'ses_missing'}
     #map both socioeconomic columns into the proposed format
-    psose_map = {'11':'1','12':'1','21':'1','22':'1','3':'3','31':'3','32':'3','33':'3','34':'3','4':'4','41':'4','42':'4','43':'4','44':'4','5':'5','51':'5','52':'5','53':'5','54':'5','7':'6','70':'6','6':'7','91':'8','92':'8','93':'8','94':'8','99':'9'}
+    psose_map = {'11':'1','12':'1','21':'1','2':'1','22':'1','3':'3','31':'3','32':'3','33':'3','34':'3','4':'4','41':'4','42':'4','43':'4','44':'4','5':'5','51':'5','52':'5','53':'5','54':'5','7':'6','70':'6','6':'7','9':'8','91':'8','92':'8','93':'8','94':'8','99':'9'}
     #sose maps
-    sose_map = {'10':'1','11':'1','12':'1','20':'1','21':'1','22':'1','23':'1','24':'1','29':'1','31':'3','32':'3','33':'3','34':'3','39':'3','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','51':'5','52':'5','53':'5','54':'5','59':'5','60':'6','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','81':'8','82':'8','91':'8','92':'8','X':'9','99':'9','na':'NaN'}
+    sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','91':'8','92':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
 
+    #CURRENT PROBLEM: Output is missing information about missing SES for some reason...
+    
     #create new columns
     #latest socioeconomic status (within the specified follow-up) for each row in SamplesList
     ses_status = ['ses_missing' for i in range(len(data))]
@@ -951,19 +953,27 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #then add the new columns to dataframe data
     #but first read SES also from Social assistance register and birth register
     #to fill in possibly missing values
+    #print(ses_status)
     data['ses'] = ses_status
+    #print(data['ses'].value_counts())
     #add the onset column if requested
-    if params['OutputAge']=='T': data['ses_OnsetAge'] = ses_OnsetAge
+    if params['OutputAge']=='T':
+        #print('Adding ses_OnsetAge column')
+        data['ses_OnsetAge'] = ses_OnsetAge
+        #print(data.columns)
 
     nan_IDs = set(data.loc[data['ses']=='ses_missing']['FINREGISTRYID'])
+    #print('Number of missing SESs:')
+    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #first social assistance register
         keep_cols = ['TNRO','TILASTOVUOSI','SOSIOEKOASEMA']
-        assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';')
+        assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';',dtype={'SOSIOEKOASEMA':str})
         #keep only rows corresponding to IDs with missing SES
         assistance = assistance[assistance['TNRO'].isin(nan_IDs)]
         #keep only rows with non-missing SOSIOEKOASEMA
         assistance = assistance.loc[~pd.isnull(assistance['SOSIOEKOASEMA'])]
+        #print('SOSIOEKOASEMA from social assistance read in')
         for index,row in assistance.iterrows():
             ID = row['TNRO']
             year = row['TILASTOVUOSI']
@@ -971,42 +981,57 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
             elif params['ByYear']=='T':
                 key = (ID,year)
                 if key not in data_ind_dict: continue
+            #print(row)
             for ind in data_ind_dict[key]:
                 #go through with each entry with NaN socioeconomic status and replace if a
                 #value is found from the social assistance register
                 old_code = data.iloc[ind]['ses']
+                dob = data.iloc[ind]['date_of_birth']
+                #print('dob:')
+                #print(dob)
+                #print('year:')
+                #print(year)
                 if year<1990:
                     #code is psose
-                    code = row['psose'].split('.')[0]
+                    code = row['SOSIOEKOASEMA'].split('.')[0]
                     if len(code)>2: code = code[:2]
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
-                    ses.iloc[ind]['ses'] = ses_names[psose_map[code]]
+                    data.at[ind,'ses'] = ses_names[psose_map[code]]
                 else:
                     #code is sose
-                    code = row['sose'].split('.')[0]
+                    #print(row)
+                    #print('dob:')
+                    #print(dob)
+                    #print('year:')
+                    #print(year)
+                    code = row['SOSIOEKOASEMA'].split('.')[0]
                     if len(code)>2: code = code[:2]
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
-                    ses.iloc[ind]['ses'] = ses_names[sose_map[code]]
+                    data.at[ind,'ses'] = ses_names[sose_map[code]]
                 if params['OutputAge']=='T':
                     #if the socioeconomic status did not change from the last record,
                     #then we keep the first occurrence of the same socioeconomic status
                     #as the onset age
                     if old_code!=code:
                         OnsetAge = getOnsetAge(dob,datetime(year,1,1))
-                        ses.iloc[ind]['ses_OnsetAge'] = OnsetAge
+                        data.at[ind,'ses_OnsetAge'] = OnsetAge
 
     #If we still have missing values, try to fill them from the birth registry
     nan_IDs = set(data.loc[data['ses']=='ses_missing']['FINREGISTRYID'])
+    #print('Number of missing SESs:')
+    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #read birth register
         keep_cols = ['AITI_TNRO','TILASTOVUOSI','SOSEKO']
-        birth = pd.read_csv(params['BirthFile'],usecols=keep_cols)
+        birth = pd.read_feather(params['BirthFile'],columns=keep_cols)
         #keep only rows corresponding to IDs with missing SES
         birth = birth[birth['AITI_TNRO'].isin(nan_IDs)]
         #keep only rows with non-missing SOSEKO
         birth = birth.loc[~pd.isnull(birth['SOSEKO'])]
+        birth['SOSEKO'] = birth['SOSEKO'].astype(str)
+        #print('SOSEKO from birth registry read in')
         for index,row in birth.iterrows():
             ID = row['AITI_TNRO']
             year = row['TILASTOVUOSI']
@@ -1020,28 +1045,52 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
                 old_code = data.iloc[ind]['ses']
                 if year<1990:
                     #code is psose
-                    code = row['psose'].split('.')[0]
+                    code = row['SOSEKO'].split('.')[0]
                     if len(code)>2: code = code[:2]
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
-                    ses.iloc[ind]['ses'] = ses_names[psose_map[code]]
+                    data.at[ind,'ses'] = ses_names[psose_map[code]]
                 else:
                     #code is sose
-                    code = row['sose'].split('.')[0]
+                    code = row['SOSEKO'].split('.')[0]
                     if len(code)>2: code = code[:2]
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
-                    ses.iloc[ind]['ses'] = ses_names[sose_map[code]]
+                    #print('code='+str(code))
+                    data.at[ind,'ses'] = ses_names[sose_map[code]]
                 if params['OutputAge']=='T':
                     #if the socioeconomic status did not change from the last record,
                     #then we keep the first occurrence of the same socioeconomic status
                     #as the onset age
                     if old_code!=code:
                         OnsetAge = getOnsetAge(dob,datetime(year,1,1))
-                        ses.iloc[ind]['ses_OnsetAge'] = OnsetAge
+                        data.at[ind,'ses_OnsetAge'] = OnsetAge
 
+    #print('Number of missing SESs:')
+    #print(len(nan_IDs))
+    #print('Number of missing SESs:')
+    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     #one-hot encode the socioeconomic status variable
-    data = pd.get_dummies(data,columns=['ses'])
+    print(data['ses'].value_counts())
+    data = pd.get_dummies(data,columns=['ses'],prefix=None)
+    cols = list(data.columns)
+    #print(cols)
+    #for c in cols:
+    #    print(c)
+    #    #print(data[c])
+    #    if c.count('ses')>0: print(data[c].value_counts())
+    #if there are no values for some of the ses levels, these indicator variables need to be
+    #separately added
+    ses_set = set(['ses_self_employed','ses_upperlevel','ses_lowerlevel','ses_manual_workers','ses_students','ses_pensioners','ses_others','ses_unknown','ses_missing'])
+    #rename the ses columns
+    for c in cols:
+        if c.count('ses_')>0 and c!='ses_OnsetAge': data.rename(columns={c:c[4:]},inplace=True)
+    #print(data.columns)
+    data_cols_set = set(data.columns)
+    #print(ses_set.difference(data_cols_set))
+    for name in ses_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
 
+    end = time()
+    print("Socioeconomic status preprocessed in "+str(end-start)+" s")
     return data
-        
+
