@@ -898,7 +898,7 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #map both socioeconomic columns into the proposed format
     psose_map = {'11':'1','12':'1','21':'1','2':'1','22':'1','3':'3','31':'3','32':'3','33':'3','34':'3','4':'4','41':'4','42':'4','43':'4','44':'4','5':'5','51':'5','52':'5','53':'5','54':'5','7':'6','70':'6','6':'7','9':'8','91':'8','92':'8','93':'8','94':'8','99':'9'}
     #sose maps
-    sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
+    sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','61':'6','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
 
     #CURRENT PROBLEM: Output is missing information about missing SES for some reason...
     
@@ -966,8 +966,8 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
         #print(data.columns)
 
     nan_IDs = set(data.loc[data['ses']=='ses_missing']['FINREGISTRYID'])
-    #print('Number of missing SESs:')
-    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
+    print('Number of missing SESs:')
+    print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #first social assistance register
         keep_cols = ['TNRO','TILASTOVUOSI','SOSIOEKOASEMA']
@@ -1023,8 +1023,8 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     #If we still have missing values, try to fill them from the birth registry
     nan_IDs = set(data.loc[data['ses']=='ses_missing']['FINREGISTRYID'])
-    #print('Number of missing SESs:')
-    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
+    print('Number of missing SESs:')
+    print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #read birth register
         keep_cols = ['AITI_TNRO','TILASTOVUOSI','SOSEKO']
@@ -1071,12 +1071,13 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     #print('Number of missing SESs:')
     #print(len(nan_IDs))
-    #print('Number of missing SESs:')
-    #print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
+    print('Number of missing SESs:')
+    print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     #one-hot encode the socioeconomic status variable
     print(data['ses'].value_counts())
     data = pd.get_dummies(data,columns=['ses'],prefix=None)
     cols = list(data.columns)
+    print('One-hot encoding done')
     #print(cols)
     #for c in cols:
     #    print(c)

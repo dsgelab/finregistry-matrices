@@ -2,7 +2,7 @@ import argparse
 import logging
 
 from time import time
-from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES
+from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES,readEdu
 
 def MakeRegFile():
 
@@ -139,12 +139,25 @@ def MakeRegFile():
     #SOCIOECONOMIC STATUS#
     ######################
 
-    #Skipped if no variables needing information about place of residence are requested
+    #Skipped if no variables needing information about socioeconomic status are requested
     ses_set = set(['ses_self_employed','ses_upperlevel','ses_lowerlevel','ses_manual_workers','ses_students','ses_pensioners','ses_others','ses_unknown','ses_missing'])
     if len(requested_features.intersection(ses_set))>0:
         data = readSES(data,params,cpi,requested_features,ID_set,data_ind_dict)
         logging.info('Socioeconomic status data read in.')
     else: logging.info('Socioeconomic data not read as no socioeconomic features were requested.')
+
+
+    ###########
+    #EDUCATION#
+    ###########
+
+    #Skipped if no variables needing information about education are requested
+    edu_set = set(['edu_years','edu_ongoing','edufield_generic','edufield_education','edufield_artshum','edufield_socialsciences','edufield_businessadminlaw','edufield_science_math_stat','edufield_ict','edufield_engineering','edufield_agriculture','edufield_health','edufield_services','edufield_NA'])
+    if len(requested_features.intersection(edu_set))>0:
+        data = readEdu(data,params,cpi,requested_features,ID_set,data_ind_dict)
+        logging.info('Education data read in.')
+    else: logging.info('Education data not read as no education-related features were requested.')
+    
     
     ########
     #OUTPUT#
