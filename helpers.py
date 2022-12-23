@@ -898,7 +898,8 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #map both socioeconomic columns into the proposed format
     psose_map = {'11':'1','12':'1','21':'1','2':'1','22':'1','3':'3','31':'3','32':'3','33':'3','34':'3','4':'4','41':'4','42':'4','43':'4','44':'4','5':'5','51':'5','52':'5','53':'5','54':'5','7':'6','70':'6','6':'7','9':'8','91':'8','92':'8','93':'8','94':'8','99':'9'}
     #sose maps
-    sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','61':'6','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
+    sose_1990_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'7','61':'7','7':'7','70':'6','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
+    sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','61':'7','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
 
     #CURRENT PROBLEM: Output is missing information about missing SES for some reason...
     
@@ -931,6 +932,13 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
                 #do not replace a real code with missing value
                 if code=='na' and ses_status[ind]!='NaN': continue
                 ses_status[ind] = ses_names[psose_map[code]]
+            elif year<1995:
+                #code is sose_1990
+                code = row['sose'].split('.')[0]
+                if len(code)>2: code = code[:2]
+                #do not replace a real code with missing value
+                if code=='na' and ses_status[ind]!='NaN': continue
+                ses_status[ind] = ses_names[sose_1990_map[code]]
             else:
                 #code is sose
                 code = row['sose'].split('.')[0]
@@ -1001,6 +1009,13 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
                     data.at[ind,'ses'] = ses_names[psose_map[code]]
+                elif year<1995:
+                    #code is sose_1990
+                    code = row['SOSIOEKOASEMA'].split('.')[0]
+                    if len(code)>2: code = code[:2]
+                    #do not replace a real code with missing value
+                    if code=='na' and ses_status[ind]!='NaN': continue
+                    ses_status[ind] = ses_names[sose_1990_map[code]]
                 else:
                     #code is sose
                     #print(row)
@@ -1053,6 +1068,13 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
                     #do not replace a real code with missing value
                     if code=='na' and ses_status[ind]!='NaN': continue
                     data.at[ind,'ses'] = ses_names[psose_map[code]]
+                elif year<1995:
+                    #code is sose_1990
+                    code = row['SOSEKO'].split('.')[0]
+                    if len(code)>2: code = code[:2]
+                    #do not replace a real code with missing value
+                    if code=='na' and ses_status[ind]!='NaN': continue
+                    ses_status[ind] = ses_names[sose_1990_map[code]]    
                 else:
                     #code is sose
                     code = row['SOSEKO'].split('.')[0]
