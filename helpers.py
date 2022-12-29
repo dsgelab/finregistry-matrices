@@ -47,7 +47,10 @@ def getSamplesFeatures(params):
     samples['end_of_followup'] = pd.to_datetime(samples['end_of_followup'])
     samples['date_of_birth'] = pd.to_datetime(samples['date_of_birth'])
     #Read in sex from minimal phenotype file
-    mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex','mother_tongue'])
+    mpfpath = params['MinimalPhenotypeFile']
+    usecols = ['FINREGISTRYID','sex','mother_tongue']
+    if mpfpath.count('.feather')>0: mpf = pd.read_feather(mpfpath,columns=usecols)
+    else: mpf = pd.read_csv(mpfpath,usecols=usecols)
     mpf = mpf[mpf['FINREGISTRYID'].isin(ID_set)]
     #one-hot encode mother tongues
     mpf = pd.get_dummies(mpf,columns=['mother_tongue'])
@@ -900,8 +903,6 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #sose maps
     sose_1990_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'7','61':'7','7':'7','70':'6','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
     sose_map = {'1':'1','10':'1','11':'1','12':'1','20':'1','2':'1','21':'1','22':'1','23':'1','24':'1','29':'1','3':'3','30':'3','31':'3','32':'3','33':'3','34':'3','39':'3','4':'4','40':'4','41':'4','42':'4','43':'4','44':'4','49':'4','5':'5','50':'5','51':'5','52':'5','53':'5','54':'5','59':'5','6':'7','60':'6','61':'7','7':'7','70':'7','71':'7','72':'7','73':'7','74':'7','79':'7','8':'8','81':'8','82':'8','83':'8','84':'8','85':'8','91':'8','92':'8','93':'8','94':'8','X':'9','9':'9','98':'9','99':'9','na':'NaN'}
-
-    #CURRENT PROBLEM: Output is missing information about missing SES for some reason...
     
     #create new columns
     #latest socioeconomic status (within the specified follow-up) for each row in SamplesList
@@ -1118,5 +1119,113 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     end = time()
     print("Socioeconomic status preprocessed in "+str(end-start)+" s")
+    return data
+
+def readEdu(data,params,cpi,requested_features,ID_set,data_ind_dict):
+    #Read in the education variables from the SF Socioeconomic dataset
+    #this function currently creates the following variables:
+    #edu_years = Highest completed education in education years
+    #edu_ongoing = Education possibly ongoing (age<35)
+    #edufield_generic = Field of education: generic programmes and qualifications
+    #edufield_education = Field of education: education
+    #edufield_artshum = Field of education: Arts and humanities
+    #edufield_socialsciences = Field of education: Social sciences, journalism and information
+    #edufield_businessadminlaw = Field of education: Business, administration and law
+    #edufield_science_math_stat = Field of education: Natural sciences, mathematics and statistics
+    #edufield_ict = Field of education: Information and communication technologies
+    #edufield_engineering = Field of education: Engineering, manufacturing and construction
+    #edufield_agriculture = Field of education: Agriculture, forestry, fisheries and veterinary
+    #edufield_health = Field of education: Health and wellfare
+    #edufield_services = Field of education: Services
+    #edufield_NA = Field of education not found or unknown
+    
+    start = time()
+    edu = pd.read_csv(params['EducationFile'],usecols=["FINREGISTRYID","vuosi","iscfi2013","kaste_t2"],dtype={'iscfi2013':str,'kaste_t2':str},encoding = 'ISO-8859-1')
+    #keep only rows corresponding to IDs in samples
+    edu = edu[edu['FINREGISTRYID'].isin(ID_set)]
+    #for both edulevel and edufield, keep only the first/2 first character of the code
+    edu['kaste_t2'] = edu['kaste_t2'].str[0]
+    edu['iscfi2013'] = edu['iscfi2013'].str[:2]
+    #map missing values to lower secondary
+    edu['kaste_t2'] = edu['kaste_t2'].fillna('2')
+    #change the vuosi column to datetime
+    edu['vuosi'] = pd.to_datetime(edu['vuosi'],format='%Y')
+    print("Education, number or data rows: "+str(len(edu)))
+
+    #mapping of education levels to education years, using the median ages for each
+    #education level
+    edu_year_map = {'2':16.5,'3':18.7,'4':38.5,'5':24.2,'6':25.1,'7':27.4,'8':34.8}
+    #notice that the education years are computed based on the highest completed degree, so durations of multiple degrees are not summed up
+    #mapping of fields of education
+    edu_field_map = {'00':'edufield_generic','01':'edufield_education','02':'edufield_artshum','03':'edufield_socialsciences','04':'edufield_businessadminlaw','05':'edufield_science_math_stat','06':'edufield_ict','07':'edufield_engineering','08':'edufield_agriculture','09':'edufield_health','10':'edufield_services','99':'edufield_NA'}
+
+    #map all education levels according to edu_year_map
+    edu['kaste_t2'] = edu['kaste_t2'].map(edu_year_map)
+    #map all education field values according to edu_field_map
+    edu['iscfi2013'] = edu['iscfi2013'].map(edu_field_map)
+    #print(edu['iscfi2013'].value_counts())
+    #create the new variables
+    edu_years = [0.0 for i in range(len(data))]
+    edufield = ['edufield_NA' for i in range(len(data))]
+    #possible ages of onset
+    if params['OutputAge']=='T': edufield_OnsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in edu.iterrows():
+        ID = row['FINREGISTRYID']
+        year = row['vuosi'].year
+        #print(year)
+        if params['ByYear']=='T':
+            key = (ID,year)
+            if key not in data_ind_dict: continue
+        elif params['ByYear']=='F': key = ID
+        
+        for ind in data_ind_dict[key]:
+            fu_end = data.iloc[ind]['end_of_followup']
+            fu_start = data.iloc[ind]['start_of_followup']
+            #skip if year is outside of follow-up for this entry
+            if year<fu_start.year or year>fu_end.year: continue
+            
+            if params['OutputAge']=='T': dob = data.iloc[ind]['date_of_birth']
+            old_edulevel = edu_years[ind]
+            edulevel = row['kaste_t2']
+            if edulevel>old_edulevel:
+                #only update edulevel if it is higher than what is recorded previously
+                edu_years[ind] = edulevel
+                edufield[ind] = row['iscfi2013']
+                #if onset age is requested
+                if params['OutputAge']=='T':
+                    #For lower-secondary education we do not have the year available
+                    #so it is set to the population median
+                    if edulevel<18: OnsetAge = getOnsetAge(dob,datetime(dob.year+16,1,1))
+                    else: OnsetAge = getOnsetAge(dob,datetime(year,1,1))
+                    edufield_OnsetAge[ind] = OnsetAge
+    #add the new columns to data
+    if 'edu_years' in requested_features: data['edu_years'] = edu_years
+    if 'edu_ongoing' in requested_features:
+        data['edu_ongoing'] = np.where(((data['end_of_followup']-data['date_of_birth']).dt.days/365.0)<35,1,0)
+    if 'edufield_generic' in requested_features:
+        #one-hot encode the field of education variable
+        data['edufield'] = edufield
+        #print(data['edufield'].value_counts())
+        #print(data)
+        data = pd.get_dummies(data,columns=['edufield'],prefix=None)
+        #print(data)
+        cols = list(data.columns)
+        #print('One-hot encoding done')
+        #if there are no values for some of the education fields,
+        #these indicator variables need to be
+        #separately added
+        edu_set = set(['edufield_generic','edufield_education','edufield_artshum','edufield_socialsciences','edufield_businessadminlaw','edufield_science_math_stat','edufield_ict','edufield_engineering','edufield_agriculture','edufield_health','edufield_services','edufield_NA'])
+        #rename the education field columns
+        for c in cols:
+            if c.count('edufield_')>0: data.rename(columns={c:c[9:]},inplace=True)
+        #print(data.columns)
+        data_cols_set = set(data.columns)
+        for name in edu_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
+        
+        if params['OutputAge']=='T': data['edufield_OnsetAge'] = edufield_OnsetAge
+        #while True:
+        #    z = input('any')
+        #    break
     return data
 

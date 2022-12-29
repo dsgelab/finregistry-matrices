@@ -39,10 +39,11 @@ def MakeRegFile():
     logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='test_run_log.txt',level=logging.INFO,filemode='w')
     logging.info("Configuration file path: "+"test_ses_config")
 
-    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather','SampleFile':'/data/projects/dimensions_of_health/tmp/parents_ses_header_first_50.csv','FeatureFile':'selected_variables_v2.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'T','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp','MarriageHistoryFile':'/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_aviohist.txt.finreg_IDsp','PedigreeFile':'/data/processed_data/dvv/dvv_pedigree_withfamid.20220501.tsv','LivingExtendedFile':'/data/processed_data/dvv/dvv_living_extended/dvv_ext_core.csv'}
+    params = {'MinimalPhenotypeFile':'/data/processed_data/minimal_phenotype/minimal_phenotype_main_dec2022.csv','SampleFile':'/data/projects/dimensions_of_health/tmp/parents_ses_header_first_50.csv','FeatureFile':'selected_variables_v2.csv','CpiFile':'/data/original_data/etk_pension/consumer_price_index_1972_2021.csv','ByYear':'F','PensionFile':'/data/processed_data/etk_pension/elake_2022-05-10.feather','OutputAge':'T','OutputFile':'out_test_','IncomeFile':'/data/processed_data/etk_pension/vuansiot_2022-05-12.feather','BenefitsFile':'/data/processed_data/etk_pension/palkaton_2022-05-10.feather','SocialAssistanceFile':'/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp','MarriageHistoryFile':'/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_aviohist.txt.finreg_IDsp','PedigreeFile':'/data/processed_data/dvv/dvv_pedigree_withfamid.20220501.tsv','LivingExtendedFile':'/data/processed_data/dvv/dvv_living_extended/dvv_ext_core.csv'}
     params['SESFile'] = '/data/processed_data/sf_socioeconomic/sose_u1442_a.csv.finreg_IDsp'
     params['BirthFile'] = '/data/processed_data/thl_birth/birth_2022-03-08.feather'
-    params['SampleFile'] = '/data/projects/dimensions_of_health/tmp/test_samplelist_N=1000.csv'
+    params['EducationFile'] = '/data/processed_data/sf_socioeconomic/tutkinto_u1442_a.csv.finreg_IDsp'
+    #params['SampleFile'] = '/data/projects/dimensions_of_health/tmp/test_samplelist_N=1000.csv'
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -157,6 +158,17 @@ def MakeRegFile():
         data = readEdu(data,params,cpi,requested_features,ID_set,data_ind_dict)
         logging.info('Education data read in.')
     else: logging.info('Education data not read as no education-related features were requested.')
+
+    #######
+    #BIRTH#
+    #######
+
+    #Skipped if no variables needing information about birth and pregnancy are requested
+    birth_set = set(['miscarriages','terminated_pregnancies','ectopic_pregnancies','stillborns','no_smoking_during_pregnancy','quit_smoking_during_1st_trimester','smoked_after_1st_trimester','smoking_during_pregnancy_NA','invitro_fertilization','thrombosis_prophylaxis','anemia','glucose_test_abnormal','no_analgesics','analgesics_info_missing','initiated_labor','promoted_labor','puncture','oxytocin','prostaglandin','extraction_of_placenta','uterine_scraping','suturing','prophylaxis','mother_antibiotics','blood_transfusion','circumcision','hysterectomy','embolisation','vaginal_delivery','vaginal_delivery_breech','forceps_delivery','vacuum_delivery','planned_c_section','urgent_c_section','emergency_c_section','not_planned_c_section','mode_of_delivery_NA','placenta_praevia','ablatio_placentae','eclampsia','shoulder_dystocia','asphyxia','live_born','stillborn_before_delivery','stillborn_during_delivery','stillborn_unknown','birth_status_NA'])
+    if len(requested_features.intersection(birth_set))>0:
+        data = readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict)
+        logging.info('Birth data read in.')
+    else: logging.info('Birth data not read as no birth/pregnancy-related features were requested.')
     
     
     ########
