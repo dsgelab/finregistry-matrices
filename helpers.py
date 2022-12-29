@@ -1229,3 +1229,139 @@ def readEdu(data,params,cpi,requested_features,ID_set,data_ind_dict):
         #    break
     return data
 
+def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
+    #Read in the education variables from the Birth registry
+    #this function currently creates the following variables:
+    #miscarriages = Number of miscarriages (KESKENMENOJA)
+    #terminated_pregnancies = Number of terminated pregnancies (KESKEYTYKSIA)
+    #ectopic_pregnancies = Number of ectopic pregnancies (ULKOPUOLISIA)
+    #stillborns	= Number of births with at least one stillborn infant (KUOLLEENASYNT)
+    #no_smoking_during_pregnancy = No smoking during pregnancy (TUPAKOINTITUNNUS)
+    #quit_smoking_during_1st_trimester = Quit smoking during 1. trimester (TUPAKOINTITUNNUS)
+    #smoked_after_1st_trimester = Smoked after 1. trimester (TUPAKOINTITUNNUS)
+    #smoking_during_pregnancy_NA = Smoking information during pregnancy not available (TUPAKOINTITUNNUS)
+    #invitro_fertilization = In-vitro fertilization (IVF)
+    #thrombosis_prophylaxis = Thrombosis prophylaxis (TROMBOOSIPROF)
+    #anemia = Anemia during pregnancy (ANEMIA)
+    #glucose_test_abnormal = Glucose test abnormal during pregnancy (SOKERI_PATOL)
+    #no_analgesics = No analgesics during labor (EI_LIEVITYSTA)
+    #analgesics_info_missing = Information about analgesics during labor missing (EI_LIEVITYS_TIETOA)
+    #initiated_labor = Artificially initiated labor (KAYNNISTYS)
+    #promoted_labor = Promoted labor (EDISTAMINEN)
+    #puncture = Amniotic membrane puncture during labor (PUHKAISU)
+    #oxytocin = Oxytocin during labor (OKSITOSIINI)
+    #prostaglandin = Prostaglandin during labor (PROSTAGLANDIINI)
+    #extraction_of_placenta = Manual extraction of placenta (ISTUKANIRROITUS)
+    #uterine_scraping = Uterine scraping (KAAVINTA)
+    #suturing = Suturing during labor (OMPELU)
+    #prophylaxis = Intrapartum antiobiotic Group B Streptococcal prophylaxis (GBS_PROFYLAKSIA)
+    #mother_antibiotics	= Antiobiotic treatment of the mother during labor (AIDIN_ANTIBIOOTTIHOITO)
+    #blood_transfusion = Blood transfusion during labor (VERENSIIRTO)
+    #circumcision = Opening of circumcision during labor (YMPARILEIKKAUKSEN_AVAUS)
+    #hysterectomy = Hysterectomy (KOHDUNPOISTO)
+    #embolisation = Embolisation (EMBOLISAATIO)
+    #vaginal_delivery = Vaginal delivery (SYNNYTYSTAPATUNNUS)
+    #vaginal_delivery_breech = Vaginal delivery, breech (SYNNYTYSTAPATUNNUS)
+    #forceps_delivery = Forceps-assisted delivery (SYNNYTYSTAPATUNNUS)
+    #vacuum_delivery = Vacuum-assisted delivery (SYNNYTYSTAPATUNNUS)
+    #planned_c_section = Delivery by planned C-section (SYNNYTYSTAPATUNNUS)
+    #urgent_c_section = Delivery by urgent C-section (SYNNYTYSTAPATUNNUS)
+    #emergency_c_section = Delivery by emergency C-section (SYNNYTYSTAPATUNNUS)
+    #not_planned_c_section = Delivery by C-section, not planned (before 2004) (SYNNYTYSTAPATUNNUS)
+    #mode_of_delivery_NA = Mode of delivery missing or unknown (SYNNYTYSTAPATUNNUS)
+    #placenta_praevia = Placenta praevia (ETINEN)
+    #ablatio_placentae = Ablatio placentae (ISTIRTO)
+    #eclampsia = Eclampsia (RKOURIS)
+    #shoulder_dystocia = Shoulder dystocia (HARTIADYSTOKIA)
+    #asphyxia = Asphyxia (ASFYKSIA)
+    #live_born = Child born live (SYNTYMATILATUNNUS)
+    #stillborn_before_delivery = Child stillborn, died before delivery (SYNTYMATILATUNNUS)
+    #stillborn_during_delivery = Child stillborn, died during delivery (SYNTYMATILATUNNUS)
+    #stillborn_unknown = Child stillborn, unknown if died before or during delivery (SYNTYMATILATUNNUS)
+    #birth_status_NA = Information missing about birth status of the child (SYNTYMATILATUNNUS)
+
+    start = time()
+    usecols = ['AITI_TNRO','TILASTOVUOSI','AITI_IKA','KESKENMENOJA','KESKEYTYKSIA','ULKOPUOLISIA','KUOLLEENASYNT','TUPAKOINTITUNNUS','IVF','TROMBOOSIPROF','ANEMIA','SOKERI_PATOL','EI_LIEVITYSTA','EI_LIEVITYS_TIETOA','KAYNNISTYS','EDISTAMINEN','PUHKAISU','OKSITOSIINI','PROSTAGLANDIINI','ISTUKANIRROITUS','KAAVINTA','OMPELU','GBS_PROFYLAKSIA','AIDIN_ANTIBIOOTTIHOITO','VERENSIIRTO','YMPARILEIKKAUKSEN_AVAUS','KOHDUNPOISTO','EMBOLISAATIO','SYNNYTYSTAPATUNNUS','ETINEN','ISTIRTO','RKOURIS','HARTIADYSTOKIA','ASFYKSIA','SYNTYMATILATUNNUS']
+    birth = pd.read_feather(params['BirthFile'],columns=usecols)
+    #keep only rows corresponding to IDs in samples
+    birth = birth[birth['FINREGISTRYID'].isin(ID_set)]
+
+    #rename columns to match the output variable names
+    rename_col_dict = {'KESKENMENOJA':'miscarriages','KESKEYTYKSIA':'terminated_pregnancies','ULKOPUOLISIA':'ectopic_pregnancies','KUOLLEENASYNT':'stillborns','IVF':'invitro_fertilization','TROMBOOSIPROF':'thrombosis_prophylaxis','ANEMIA':'anemia','SOKERI_PATOL':'glucose_test_abnormal','EI_LIEVITYSTA':'no_analgesics','EI_LIEVITYS_TIETOA':'analgesics_info_missing','KAYNNISTYS':'initiated_labor','EDISTAMINEN':'promoted_labor','PUHKAISU':'puncture','OKSITOSIINI':'oxytocin','PROSTAGLANDIINI':'prostaglandin','ISTUKANIRROITUS':'extraction_of_placenta','KAAVINTA':'uterine_scraping','OMPELU':'suturing','GBS_PROFYLAKSIA':'prophylaxis','AIDIN_ANTIBIOOTTIHOITO':'mother_antibiotics','VERENSIIRTO':'blood_transfusion','YMPARILEIKKAUKSEN_AVAUS':'circumcision','KOHDUNPOISTO':'hysterectomy','EMBOLISAATIO':'embolisation','ETINEN':'placenta_praevia','ISTIRTO':'ablatio_placentae','RKOURIS':'eclampsia','HARTIADYSTOKIA':'shoulder_dystocia','ASFYKSIA':'asphyxia'}
+
+    birth = birth.rename(columns=rename_col_dict)
+    #rename levels of TUPAKOINTITUNNUS, SYNNYTYSTAPATUNNUS and SYNTYMATILATUNNUS
+    TUPAKOINTITUNNUS_dict = {1:'no_smoking_during_pregnancy',2:'quit_smoking_during_1st_trimester',3:'smoked_after_1st_trimester',4:'smoked_after_1st_trimester',9:'smoking_during_pregnancy_NA'}
+    SYNNYTYSTAPATUNNUS_dict = {1.0:'vaginal_delivery',2.0:'vaginal_delivery_breech',3.0:'forceps_delivery',4.0:'vacuum_delivery',5.0:'planned_c_section',6.0:'urgent_c_section',7.0:'emergency_c_section',8.0:'not_planned_c_section',9.0:'mode_of_delivery_NA',np.nan:'mode_of_delivery_NA'}
+    SYNTYMATILATUNNUS_dict = {1:'live_born',2:'stillborn_before_delivery',3:'stillborn_during_delivery',4:'stillborn_unknown'}
+
+    birth['TUPAKOINTITUNNUS'] = birth['TUPAKOINTITUNNUS'].map(TUPAKOINTITUNNUS_dict)
+    birth['SYNNYTYSTAPATUNNUS'] = birth['SYNNYTYSTAPATUNNUS'].map(SYNNYTYSTAPATUNNUS_dict)
+    birth['SYNTYMATILATUNNUS'] = birth['SYNTYMATILATUNNUS'].map(SYNTYMATILATUNNUS_dict)
+
+    #initialize the new columns
+    new_cols = {}
+    for cname in birth.columns:
+        if cname not in ['AITI_TNRO','TILASTOVUOSI','AITI_IKA']: new_cols[cname] = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': birth_onsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in birth.iterrows():
+        ID = row['AITI_TNRO']
+        year = row['TILASTOVUOSI']
+        if params['ByYear']=='T':
+            key = (ID,year)
+            if key not in data_ind_dict: continue
+        elif params['ByYear']=='F': key = ID
+        
+        for ind in data_ind_dict[key]:
+            fu_end = data.iloc[ind]['end_of_followup']
+            fu_start = data.iloc[ind]['start_of_followup']
+            #skip if year is outside of follow-up for this entry
+            if year<fu_start.year or year>fu_end.year: continue
+
+            for cname in new_cols:
+                #do not overwrite 1s with never 0s
+                if new_cols[cname][ind]<1: new_cols[cname][ind] = row[cname]
+            #check if age at birth is requested
+            if params['OutputAge']=='T': birth_onsetAge[ind] = row['AITI_IKA']
+    #add the new columns to data
+    for cname in new_cols:
+        if cname in requested_features: data[cname] = new_cols[cname]
+    if 'no_smoking_during_pregnancy' in requested_features:
+        data['TUPAKOINTITUNNUS'] = new_cols['TUPAKOINTITUNNUS']
+        #one-hot encode
+        data = pd.get_dummies(data,columns=['TUPAKOINTITUNNUS'],prefix=None)
+        cols = list(data.columns)
+        for c in cols:
+            if c.count('TUPAKOINTITUNNUS_')>0: data.rename(columns={c:c[17:]},inplace=True)
+        smoking_set = set(['no_smoking_during_pregnancy','quit_smoking_during_1st_trimester','smoked_after_1st_trimester','smoked_after_1st_trimester','smoking_during_pregnancy_NA'])
+        #if some of the smoking levels are missing from the data, add empty columns
+        data_cols_set = set(data.columns)
+        for name in smoking_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
+            
+    if 'vaginal_delivery' in requested_features:
+        data['SYNNYTYSTAPATUNNUS'] = new_cols['SYNNYTYSTAPATUNNUS']
+        #one-hot encode
+        data = pd.get_dummies(data,columns=['SYNNYTYSTAPATUNNUS'],prefix=None)
+        cols = list(data.columns)
+        for c in cols:
+            if c.count('SYNNYTYSTAPATUNNUS_')>0: data.rename(columns={c:c[19:]},inplace=True)
+        delivery_set = set(['vaginal_delivery','vaginal_delivery_breech','forceps_delivery','vacuum_delivery','planned_c_section','urgent_c_section','emergency_c_section','not_planned_c_section','mode_of_delivery_NA'])
+        #if some of the smoking levels are missing from the data, add empty columns
+        data_cols_set = set(data.columns)
+        for name in delivery_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
+        
+    if 'live_born' in requested_features:
+        data['SYNTYMATILATUNNUS'] = new_cols['SYNTYMATILATUNNUS']
+        #one-hot encode
+        data = pd.get_dummies(data,columns=['SYNTYMATILATUNNUS'],prefix=None)
+        cols = list(data.columns)
+        for c in cols:
+            if c.count('SYNTYMATILATUNNUS_')>0: data.rename(columns={c:c[18:]},inplace=True)
+        birth_set = set(['live_born','stillborn_before_delivery','stillborn_during_delivery','stillborn_unknown'])
+        #if some of the smoking levels are missing from the data, add empty columns
+        data_cols_set = set(data.columns)
+        for name in birth_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': data['birth_OnsetAge'] = birth_onsetAge
+
+    return data

@@ -2,7 +2,7 @@ import argparse
 import logging
 
 from time import time
-from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES,readEdu
+from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES,readEdu,readBirth
 
 def MakeRegFile():
 
