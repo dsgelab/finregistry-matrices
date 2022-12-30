@@ -1284,7 +1284,7 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     usecols = ['AITI_TNRO','TILASTOVUOSI','AITI_IKA','KESKENMENOJA','KESKEYTYKSIA','ULKOPUOLISIA','KUOLLEENASYNT','TUPAKOINTITUNNUS','IVF','TROMBOOSIPROF','ANEMIA','SOKERI_PATOL','EI_LIEVITYSTA','EI_LIEVITYS_TIETOA','KAYNNISTYS','EDISTAMINEN','PUHKAISU','OKSITOSIINI','PROSTAGLANDIINI','ISTUKANIRROITUS','KAAVINTA','OMPELU','GBS_PROFYLAKSIA','AIDIN_ANTIBIOOTTIHOITO','VERENSIIRTO','YMPARILEIKKAUKSEN_AVAUS','KOHDUNPOISTO','EMBOLISAATIO','SYNNYTYSTAPATUNNUS','ETINEN','ISTIRTO','RKOURIS','HARTIADYSTOKIA','ASFYKSIA','SYNTYMATILATUNNUS']
     birth = pd.read_feather(params['BirthFile'],columns=usecols)
     #keep only rows corresponding to IDs in samples
-    birth = birth[birth['FINREGISTRYID'].isin(ID_set)]
+    birth = birth[birth['AITI_TNRO'].isin(ID_set)]
 
     #rename columns to match the output variable names
     rename_col_dict = {'KESKENMENOJA':'miscarriages','KESKEYTYKSIA':'terminated_pregnancies','ULKOPUOLISIA':'ectopic_pregnancies','KUOLLEENASYNT':'stillborns','IVF':'invitro_fertilization','TROMBOOSIPROF':'thrombosis_prophylaxis','ANEMIA':'anemia','SOKERI_PATOL':'glucose_test_abnormal','EI_LIEVITYSTA':'no_analgesics','EI_LIEVITYS_TIETOA':'analgesics_info_missing','KAYNNISTYS':'initiated_labor','EDISTAMINEN':'promoted_labor','PUHKAISU':'puncture','OKSITOSIINI':'oxytocin','PROSTAGLANDIINI':'prostaglandin','ISTUKANIRROITUS':'extraction_of_placenta','KAAVINTA':'uterine_scraping','OMPELU':'suturing','GBS_PROFYLAKSIA':'prophylaxis','AIDIN_ANTIBIOOTTIHOITO':'mother_antibiotics','VERENSIIRTO':'blood_transfusion','YMPARILEIKKAUKSEN_AVAUS':'circumcision','KOHDUNPOISTO':'hysterectomy','EMBOLISAATIO':'embolisation','ETINEN':'placenta_praevia','ISTIRTO':'ablatio_placentae','RKOURIS':'eclampsia','HARTIADYSTOKIA':'shoulder_dystocia','ASFYKSIA':'asphyxia'}
@@ -1299,6 +1299,34 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     birth['SYNNYTYSTAPATUNNUS'] = birth['SYNNYTYSTAPATUNNUS'].map(SYNNYTYSTAPATUNNUS_dict)
     birth['SYNTYMATILATUNNUS'] = birth['SYNTYMATILATUNNUS'].map(SYNTYMATILATUNNUS_dict)
 
+    #one-hot encode TUPAKOINTITUNNUS, SYNNYTYSTAPATUNNUS and SYNTYMATILATUNNUS columns
+    birth = pd.get_dummies(birth,columns=['TUPAKOINTITUNNUS'],prefix=None)
+    cols = list(birth.columns)
+    for c in cols:
+        if c.count('TUPAKOINTITUNNUS_')>0: birth.rename(columns={c:c[17:]},inplace=True)
+    smoking_set = set(['no_smoking_during_pregnancy','quit_smoking_during_1st_trimester','smoked_after_1st_trimester','smoked_after_1st_trimester','smoking_during_pregnancy_NA'])
+    #if some of the smoking levels are missing from the data, add empty columns
+    data_cols_set = set(birth.columns)
+    for name in smoking_set.difference(data_cols_set): birth[name] = [0 for i in range(len(birth))]
+
+    birth = pd.get_dummies(birth,columns=['SYNNYTYSTAPATUNNUS'],prefix=None)
+    cols = list(birth.columns)
+    for c in cols:
+        if c.count('SYNNYTYSTAPATUNNUS_')>0: birth.rename(columns={c:c[19:]},inplace=True)
+    delivery_set = set(['vaginal_delivery','vaginal_delivery_breech','forceps_delivery','vacuum_delivery','planned_c_section','urgent_c_section','emergency_c_section','not_planned_c_section','mode_of_delivery_NA'])
+    #if some of the smoking levels are missing from the data, add empty columns
+    data_cols_set = set(birth.columns)
+    for name in delivery_set.difference(data_cols_set): birth[name] = [0 for i in range(len(birth))]
+
+    birth = pd.get_dummies(birth,columns=['SYNTYMATILATUNNUS'],prefix=None)
+    cols = list(birth.columns)
+    for c in cols:
+        if c.count('SYNTYMATILATUNNUS_')>0: birth.rename(columns={c:c[18:]},inplace=True)
+    birth_set = set(['live_born','stillborn_before_delivery','stillborn_during_delivery','stillborn_unknown'])
+    #if some of the smoking levels are missing from the data, add empty columns
+    data_cols_set = set(birth.columns)
+    for name in birth_set.difference(data_cols_set): birth[name] = [0 for i in range(len(birth))]
+        
     #initialize the new columns
     new_cols = {}
     for cname in birth.columns:
@@ -1321,47 +1349,18 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
             for cname in new_cols:
                 #do not overwrite 1s with never 0s
+                #print(cname)
+                #print(birth[cname])
                 if new_cols[cname][ind]<1: new_cols[cname][ind] = row[cname]
             #check if age at birth is requested
             if params['OutputAge']=='T': birth_onsetAge[ind] = row['AITI_IKA']
     #add the new columns to data
     for cname in new_cols:
         if cname in requested_features: data[cname] = new_cols[cname]
-    if 'no_smoking_during_pregnancy' in requested_features:
-        data['TUPAKOINTITUNNUS'] = new_cols['TUPAKOINTITUNNUS']
-        #one-hot encode
-        data = pd.get_dummies(data,columns=['TUPAKOINTITUNNUS'],prefix=None)
-        cols = list(data.columns)
-        for c in cols:
-            if c.count('TUPAKOINTITUNNUS_')>0: data.rename(columns={c:c[17:]},inplace=True)
-        smoking_set = set(['no_smoking_during_pregnancy','quit_smoking_during_1st_trimester','smoked_after_1st_trimester','smoked_after_1st_trimester','smoking_during_pregnancy_NA'])
-        #if some of the smoking levels are missing from the data, add empty columns
-        data_cols_set = set(data.columns)
-        for name in smoking_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
-            
-    if 'vaginal_delivery' in requested_features:
-        data['SYNNYTYSTAPATUNNUS'] = new_cols['SYNNYTYSTAPATUNNUS']
-        #one-hot encode
-        data = pd.get_dummies(data,columns=['SYNNYTYSTAPATUNNUS'],prefix=None)
-        cols = list(data.columns)
-        for c in cols:
-            if c.count('SYNNYTYSTAPATUNNUS_')>0: data.rename(columns={c:c[19:]},inplace=True)
-        delivery_set = set(['vaginal_delivery','vaginal_delivery_breech','forceps_delivery','vacuum_delivery','planned_c_section','urgent_c_section','emergency_c_section','not_planned_c_section','mode_of_delivery_NA'])
-        #if some of the smoking levels are missing from the data, add empty columns
-        data_cols_set = set(data.columns)
-        for name in delivery_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
-        
-    if 'live_born' in requested_features:
-        data['SYNTYMATILATUNNUS'] = new_cols['SYNTYMATILATUNNUS']
-        #one-hot encode
-        data = pd.get_dummies(data,columns=['SYNTYMATILATUNNUS'],prefix=None)
-        cols = list(data.columns)
-        for c in cols:
-            if c.count('SYNTYMATILATUNNUS_')>0: data.rename(columns={c:c[18:]},inplace=True)
-        birth_set = set(['live_born','stillborn_before_delivery','stillborn_during_delivery','stillborn_unknown'])
-        #if some of the smoking levels are missing from the data, add empty columns
-        data_cols_set = set(data.columns)
-        for name in birth_set.difference(data_cols_set): data[name] = [0 for i in range(len(data))]
+
     if params['OutputAge']=='T': data['birth_OnsetAge'] = birth_onsetAge
+
+    end = time()
+    print("Birth registry preprocessed in "+str(end-start)+" s")
 
     return data
