@@ -1364,3 +1364,135 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     print("Birth registry preprocessed in "+str(end-start)+" s")
 
     return data
+
+def readLongterm(data,params,cpi,requested_features,ID_set,data_ind_dict):
+    #Read in the long-term care variables from the Social hilmo
+    #this function currently creates the following variables:
+    #care_in_elderly_home = Type of long-term care: Care in an elderly home (PALA)
+    #assisted_living_elderly = Type of long-term care: Round-the-clock assisted living for the elderly (PALA)
+    #institutional_care_demented = Type of long-term care: Institutional care for the demented (PALA)
+    #enhanced_care_demented = Type of long-term care: Enhanced residential care for the demented (PALA)
+    #institutionalized_intellectual_disability = Type of long-term care: Intellectual disability services, institutionalized care (PALA)
+    #assisted_intellectual_disability = Type of long-term care: Intellectual disability services, assisted living (PALA)
+    #instructed_intellectual_disability = Type of long-term care: Intellectual disability services, instructed living (PALA)
+    #supported_intellectual_disability = Type of long-term care: Intellectual disability services, supported living (PALA)
+    #services_fos_substance_abusers = Type of long-term care: Services for substance abusers (PALA)
+    #rehabilitation = Type of long-term care: Institutional care, rehabilitation (PALA)
+    #residential_care_housing = Type of long-term care: Residential care housing (PALA)
+    #psychiatric_residential_care_housing = Type of long-term care: Psychiatric residential care housing unit (PALA)
+    #247_residential_care_housing_under_65yo = Type of long-term care: Round-the-clock residential care housing (for less than 65 years old) (PALA)
+    #247_psychiatric_residential_care = Type of long-term care: Round-the-clock care in a psychiatric residential care housing unit (PALA)
+    #unknown_long_term_care = Type of long-term care: unknown code (PALA)
+    #mr_physical_reasons = Main reason for treatment in social welfare services: physical reasons (TUSYY1)
+    #mr_insufficient_self_care = Main reason for treatment in social welfare services: insufficient self-care abilities (hygiene) (TUSYY1)
+    #mr_deficient_locomotion = Main reason for treatment in social welfare services: deficient locomotion (TUSYY1)
+    #mr_nervous_system = Main reason for treatment in social welfare services: nervous system related reasons (TUSYY1)
+    #mr_forgetfullness = Main reason for treatment in social welfare services: forgetfullness (TUSYY1)
+    #mr_mental_confusion = Main reason for treatment in social welfare services: mental confusion (TUSYY1)
+    #mr_deficiencies_in_communication = Main reason for treatment in social welfare services: deficiencies in communication (speech, hearing, eyesight) (TUSYY1)
+    #mr_dementia = Main reason for treatment in social welfare services: dementia (TUSYY1)
+    #mr_psychic_social_reasons = Main reason for treatment in social welfare services: psychic-social reasons (TUSYY1)
+    #mr_depression = Main reason for treatment in social welfare services: depression (TUSYY1)
+    #mr_other_psychatric = Main reason for treatment in social welfare services: other psychiatric disease/symptom (TUSYY1)
+    #mr_loneliness_insecurity = Main reason for treatment in social welfare services: loneliness/insecurity (TUSYY1)
+    #mr_difficulties_with_housing = Main reason for treatment in social welfare services: difficulties with housing (TUSYY1)
+    #mr_lack_of_help_from_family = Main reason for treatment in social welfare services: lack of help from the family (TUSYY1)
+    #mr_caretaker_vacation = Main reason for treatment in social welfare services: vacation of the caretaker (TUSYY1)
+    #mr_lack_of_services = Main reason for treatment in social welfare services: lack of services for those living at home (TUSYY1)
+    #mr_lack_of_place_of_care = Main reason for treatment in social welfare services: lack of appropriate place of care (TUSYY1)
+    #mr_rehabilitation = Main reason for treatment in social welfare services: rehabilitiation (TUSYY1)
+    #mr_med_rehabilitation = Main reason for treatment in social welfare services: medical rehabilitation (TUSYY1)
+    #mr_accident = Main reason for treatment in social welfare services: accident (TUSYY1)
+    #mr_somatic = Main reason for treatment in social welfare services: investigation and treatment of a somatic disease (TUSYY1)
+    #mr_alcohol_use = Main reason for treatment in social welfare services: alcohol use issues (TUSYY1)
+    #mr_drug_use = Main reason for treatment in social welfare services: drug use issues (TUSYY1)
+    #mr_med_abuse = Main reason for treatment in social welfare services: abuse of medications (TUSYY1)
+    #mr_polysubstance_abuse = Main reason for treatment in social welfare services: polysubstance use issues (TUSYY1)
+    #mr_other_addiction = Main reason for treatment in social welfare services: other addiction (TUSYY1)
+    #mr_substance_use_family = Main reason for treatment in social welfare services: substance use issues of a family member or something similar (TUSYY1)
+    #mr_NA = Main reason for treatment in social welfare services: missing (TUSYY1)
+    #long_term_care_decision = Long-term care decision or a lease in an institutional housing unit (PITK) Note that the approximately 100 cases where the value of this variable is a decimal number in the original data are treated as missing
+    #long_term_care_duration = Total treatment days for a calendar year (KVHP)
+
+    start = time()
+    usecols = ['TNRO','VUOSI','PALA','TUSYY1','PITK','KVHP']
+    longterm = pd.read_csv(params['SocialHilmoFile'],sep=',',usecols=usecols,dtype={'PALA':str,'TUSYY1':str},encoding = 'ISO-8859-1')
+    #keep only rows corresponding to IDs in samples
+    longterm = longterm[longterm['TNRO'].isin(ID_set)]
+    #preprocess TUSYY1 to harmonize the codes used
+    longterm['TUSYY1'].replace(inplace=True,to_replace='"',regex=False,value='')
+    longterm['TUSYY1'].fillna(-1,inplace=True)
+    longterm['TUSYY1'] = longterm['TUSYY1'].astype(float).astype(int)
+    longterm['PITK'] = longterm['PITK'].map({'K':1,'E':0,1.0:np.nan,2.0:np.nan,3.0:np.nan,4.0:np.nan,5.0:np.nan,6.0:np.nan})
+    #dictionaries for mapping the PALA and TUSYY1 codes to the ouput variables
+    
+    PALA_dict = {'31.0':'care_in_elderly_home','32.0':'assisted_living_elderly','33.0':'institutional_care_demented','34.0':'enhanced_care_demented','41.0':'institutionalized_intellectual_disability','42.0':'assisted_intellectual_disability','43.0':'instructed_intellectual_disability','44.0':'supported_intellectual_disability','5.0':'services_fos_substance_abusers','6.0':'rehabilitation','81.0':'residential_care_housing','82.0':'psychiatric_residential_care_housing','84.0':'247_residential_care_housing_under_65yo','85.0':'247_psychiatric_residential_care','2.0':'unknown_long_term_care','3.0':'unknown_long_term_care','83.0':'unknown_long_term_care','95.0':'unknown_long_term_care','':'unknown_long_term_care'}
+
+    TUSYY1_dict = {1:'mr_physical_reasons',11:'mr_insufficient_self_care',12:'mr_deficient_locomotion',2:'mr_nervous_system',21:'mr_forgetfullness',22:'mr_mental_confusion',23:'mr_deficiencies_in_communication',24:'mr_dementia',3:'mr_psychic_social_reasons',31:'mr_depression',32:'mr_other_psychatric',34:'mr_loneliness_insecurity',35:'mr_difficulties_with_housing',36:'mr_lack_of_help_from_family',37:'mr_caretaker_vacation',38:'mr_lack_of_services',39:'mr_lack_of_place_of_care',4:'mr_rehabilitation',41:'mr_med_rehabilitation',5:'mr_accident',6:'mr_somatic',71:'mr_alcohol_use',72:'mr_drug_use',73:'mr_med_abuse',74:'mr_polysubstance_abuse',75:'mr_other_addiction',76:'mr_substance_use_family',-1:'mr_NA'}
+
+    longterm['TUSYY1'] = longterm['TUSYY1'].map(TUSYY1_dict)
+    longterm['PALA'] = longterm['PALA'].map(PALA_dict)
+
+    longterm = longterm.rename(columns={'PITK':'long_term_care_decision','KVHP':'long_term_care_duration'})
+    #one-hot encode the TUSYY1 and PALA variables
+    longterm = pd.get_dummies(longterm,columns=['TUSYY1'],prefix=None)
+    cols = list(longterm.columns)
+    for c in cols:
+        if c.count('TUSYY1_')>0: longterm.rename(columns={c:c[7:]},inplace=True)
+    main_reason_set = set(['mr_physical_reasons','mr_insufficient_self_care','mr_deficient_locomotion','mr_nervous_system','mr_forgetfullness','mr_mental_confusion','mr_deficiencies_in_communication','mr_dementia','mr_psychic_social_reasons','mr_depression','mr_other_psychatric','mr_loneliness_insecurity','mr_difficulties_with_housing','mr_lack_of_help_from_family','mr_caretaker_vacation','mr_lack_of_services','mr_lack_of_place_of_care','mr_rehabilitation','mr_med_rehabilitation','mr_accident','mr_somatic','mr_alcohol_use','mr_drug_use','mr_med_abuse','mr_polysubstance_abuse','mr_other_addiction','mr_substance_use_family','mr_NA'])
+    #if some of the levels are missing from the data, add empty columns
+    data_cols_set = set(longterm.columns)
+    for name in main_reason_set.difference(data_cols_set): longterm[name] = [0 for i in range(len(longterm))]
+
+    longterm = pd.get_dummies(longterm,columns=['PALA'],prefix=None)
+    cols = list(longterm.columns)
+    for c in cols:
+        if c.count('PALA_')>0: longterm.rename(columns={c:c[5:]},inplace=True)
+    type_set = set(['care_in_elderly_home','assisted_living_elderly','institutional_care_demented','enhanced_care_demented','institutionalized_intellectual_disability','assisted_intellectual_disability','instructed_intellectual_disability','supported_intellectual_disability','services_fos_substance_abusers','rehabilitation','residential_care_housing','psychiatric_residential_care_housing','247_residential_care_housing_under_65yo','247_psychiatric_residential_care','unknown_long_term_care'])
+    #if some of the levels are missing from the data, add empty columns
+    data_cols_set = set(longterm.columns)
+    for name in type_set.difference(data_cols_set): longterm[name] = [0 for i in range(len(longterm))]
+
+    #initialize the new columns
+    new_cols = {}
+    for cname in longterm.columns:
+        if cname not in ['TNRO','VUOSI']: new_cols[cname] = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': longtermcare_onsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in longterm.iterrows():
+        ID = row['TNRO']
+        year = row['VUOSI']
+        if params['ByYear']=='T':
+            key = (ID,year)
+            if key not in data_ind_dict: continue
+        elif params['ByYear']=='F': key = ID
+        
+        for ind in data_ind_dict[key]:
+            fu_end = data.iloc[ind]['end_of_followup']
+            fu_start = data.iloc[ind]['start_of_followup']
+            #skip if year is outside of follow-up for this entry
+            if year<fu_start.year or year>fu_end.year: continue
+
+            if params['OutputAge']=='T': dob = data.iloc[ind]['date_of_birth']
+            for cname in new_cols:
+                #durations of the long-term care periods are summed up
+                if cname=='long_term_care_duration':
+                    new_cols['long_term_care_duration'][ind] += row['long_term_care_duration']
+                else:
+                    #do not overwrite 1s with never 0s
+                    #print(cname)
+                    #print(longterm[cname][ind])
+                    if new_cols[cname][ind]<1: new_cols[cname][ind] = row[cname]
+            #check if age at birth is requested
+            if params['OutputAge']=='T':
+                OnsetAge = getOnsetAge(dob,datetime(year,1,1))
+                longtermcare_onsetAge[ind] = OnsetAge
+    #add the new columns to data
+    for cname in new_cols:
+        if cname in requested_features: data[cname] = new_cols[cname]
+
+    if params['OutputAge']=='T': data['longtermcare_OnsetAge'] = longtermcare_onsetAge
+
+    end = time()
+    print("Long-term care data preprocessed in "+str(end-start)+" s")
+    return data
