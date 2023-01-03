@@ -554,6 +554,59 @@ def readSocialAssistance(data,params,cpi,requested_features,ID_set,data_ind_dict
     print('Social assistance data read in in '+str(end-start)+" s")
     return data
 
+def readEmigration(data,params,cpi,requested_features,ID_set,data_ind_dict):
+    #Read in the emigration variable from the DVV relatives
+    #this function currently creates one variable, which is:
+    #emigrated = Whether the individual has emigrated; 0=no, 1=yes
+    
+    start = time()
+    keep_cols = ['FINREGISTRYID','Emigration_date']
+    relatives = pd.read_csv(params['RelativesFile'],usecols=keep_cols,sep=',')
+    #keep only rows where Emigration_date is not missing
+    relatives = relatives.loc[~relatives['Emigration_date'].isnull()]
+    #keep only rows corresponding to IDs in samples
+    relatives = relatives[relatives['FINREGISTRYID'].isin(ID_set)]
+    #convert date columns to datetime
+    relatives['Emigration_date'] = pd.to_datetime(relatives['Emigration_date'])
+    
+    print("Emigration, number or data rows: "+str(len(relatives)))
+
+    #initialize the new columns
+    emigrated = [0 for i in range(len(data))]
+    if params['OutputAge']=='T': emigrated_onsetAge = [np.nan for i in range(len(data))]
+
+    for index,row in relatives.iterrows():
+        ID = row['FINREGISTRYID']
+        emigration_date = row['Emigration_date']
+        if params['ByYear']=='T':
+            key = (ID,emigration_date.year)
+            if key not in data_ind_dict: continue
+        elif params['ByYear']=='F': key = ID
+
+        
+        for ind in data_ind_dict[key]:
+            fu_end = data.iloc[ind]['end_of_followup']
+            fu_start = data.iloc[ind]['start_of_followup']
+            #skip if emigration date is outside of follow-up for this entry
+            if emigration_date<fu_start or emigration_date>fu_end: continue
+
+            emigrated[ind] = 1
+            #check if age at emigration is requested
+            if params['OutputAge']=='T':
+                dob = data.iloc[ind]['date_of_birth']
+                onsetAge = getOnsetAge(dob,emigration_date)
+                emigrated_onsetAge[ind] = onsetAge
+    #add the new columns to data
+    data['emigrated'] = emigrated
+
+    if params['OutputAge']=='T': data['emigrated_OnsetAge'] = emigrated_onsetAge
+
+    end = time()
+    print("Emigration data preprocessed in "+str(end-start)+" s")
+
+    return data
+
+
 def readMaritalStatus(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #Read in the variables from the DVV marriage history
     #this function currently creates two variables, which are:
@@ -762,8 +815,8 @@ def readLiving(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #intermunicipal_net_migration_1000_inhabitants = The indicator gives intermunicipal net migration per thousand inhabitants. Population figures refer to mean population. Net migration is obtained by subtracting those leaving the region (out-migrants) from those moving to the region (in-migrants). Accordingly, net migration is positive if more people have moved to the region than left it. Migration between municipalities has been adjusted throughout the time series so that it correspond with the most recent regional divisions, i.e., migration between municipalities that have since merged has been eliminated from the figures. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland.
     #sale_of_alcoholic_beverages_per_capita = The indicator describes the amount of alcoholic beverages sold at Alko stores and delivered to grocery stores, kiosks, service stations and licensed restaurants within the area of the municipality, as litres of pure alcohol per local inhabitant during year. It describes the documented consumption of alcohol per capita. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland.
     #self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator =
-    #average_income_of_inhabitants = Average income of inhabitants (€) is the average annual income of inhabitants. (FROM: Statistics Finland 1km² dataset)
-    #median_income_of_inhabitants = Median income of inhabitants (€) is obtained by listing inhabitants by the amount of disposable monetary income. Median income is the income of the middle inhabitant. An equal number of inhabitants remain on both sides of the middle inhabitant. (FROM: Statistics Finland 1km² dataset)
+    #average_income_of_inhabitants = Average income of inhabitants is the average annual income of inhabitants. (FROM: Statistics Finland 1km2 dataset)
+    #median_income_of_inhabitants = Median income of inhabitants is obtained by listing inhabitants by the amount of disposable monetary income. Median income is the income of the middle inhabitant. An equal number of inhabitants remain on both sides of the middle inhabitant. (FROM: Statistics Finland 1km2 dataset)
     
     start = time()
     #first read in the dvv_ext_core for individuals' information
@@ -1293,7 +1346,7 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #rename levels of TUPAKOINTITUNNUS, SYNNYTYSTAPATUNNUS and SYNTYMATILATUNNUS
     TUPAKOINTITUNNUS_dict = {1:'no_smoking_during_pregnancy',2:'quit_smoking_during_1st_trimester',3:'smoked_after_1st_trimester',4:'smoked_after_1st_trimester',9:'smoking_during_pregnancy_NA'}
     SYNNYTYSTAPATUNNUS_dict = {1.0:'vaginal_delivery',2.0:'vaginal_delivery_breech',3.0:'forceps_delivery',4.0:'vacuum_delivery',5.0:'planned_c_section',6.0:'urgent_c_section',7.0:'emergency_c_section',8.0:'not_planned_c_section',9.0:'mode_of_delivery_NA',np.nan:'mode_of_delivery_NA'}
-    SYNTYMATILATUNNUS_dict = {1:'live_born',2:'stillborn_before_delivery',3:'stillborn_during_delivery',4:'stillborn_unknown'}
+    SYNTYMATILATUNNUS_dict = {1:'live_born',2:'stillborn_before_delivery',3:'stillborn_during_delivery',4:'stillborn_unknown',np.nan:'birth_status_NA'}
 
     birth['TUPAKOINTITUNNUS'] = birth['TUPAKOINTITUNNUS'].map(TUPAKOINTITUNNUS_dict)
     birth['SYNNYTYSTAPATUNNUS'] = birth['SYNNYTYSTAPATUNNUS'].map(SYNNYTYSTAPATUNNUS_dict)

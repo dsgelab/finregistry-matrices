@@ -2,7 +2,7 @@ import argparse
 import logging
 
 from time import time
-from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES,readEdu,readBirth,readLongterm
+from helpers import readConfig,getSamplesFeatures,readMinimalPheno,readSocialAssistance,readBenefits,readIncome,readPension,getCPI,readMaritalStatus,readPedigree,readLiving,readSES,readEdu,readBirth,readLongterm,readEmigration
 
 def MakeRegFile():
 
@@ -44,7 +44,8 @@ def MakeRegFile():
     params['BirthFile'] = '/data/processed_data/thl_birth/birth_2022-03-08.feather'
     params['EducationFile'] = '/data/processed_data/sf_socioeconomic/tutkinto_u1442_a.csv.finreg_IDsp'
     params['SocialHilmoFile'] =	'/data/processed_data/thl_soshilmo/thl2019_1776_soshilmo.csv.finreg_IDsp'
-    #params['SampleFile'] = '/data/projects/dimensions_of_health/tmp/test_samplelist_N=1000.csv'
+    params['RelativesFile'] = '/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_ja_sukulaiset.txt.finreg_IDsp'
+    params['SampleFile'] = '/data/projects/dimensions_of_health/tmp/test_samplelist_N=1000.csv'
     #ipython test lines end here
     
     #read in the samples and features to use in the output
@@ -103,6 +104,16 @@ def MakeRegFile():
         logging.info('Social assistance data read in.')
     else: logging.info('Social assistance data not read as no social assistance-related features were requested.')
 
+    ############
+    #EMIGRATION#
+    ############
+
+    #Skipped if emigration variable is not requested
+    emi_set = set(['emigrated'])
+    if len(requested_features.intersection(emi_set))>0:
+        data = readEmigration(data,params,cpi,requested_features,ID_set,data_ind_dict)
+        logging.info('Emigration data read in.')
+    else: logging.info('Emigration data not read as emigration variable was not requested.')
 
     ##################
     #MARRIAGE HISTORY#
