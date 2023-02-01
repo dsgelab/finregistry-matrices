@@ -3,6 +3,17 @@
 
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
 
+## Contents
+
+- [Introduction](#intro)
+- [Creating matrices from endpoints](#endpt)
+- [Creating matrices from drug purchases](#drug)
+- [Creating matrices from other data sources](#other)
+- [To do items](#todo)
+
+<a id='intro'></a>
+## Introduction
+
 **Now allows to output multiple records per individual!**
 The same individual can appear for multiple times in your `SampleFile`, with different dates for inclusion periods. The program will output for each inclusion period, each individual, with the first column as `FINREGISTRYID`, followed by `LowerAge` and `UpperAge` indicating the lower and upper bound of inclusion period in terms of individual's age. The output will be sorted by the these three columns in the same order. The program code allows you to have at max 20 different inclusion periods for each individual in your `SampleFile`. If that is not enough, you can also expand it by changing
 <pre>
@@ -33,14 +44,6 @@ Param | Description | Type | Default
 `RegSource` | Source registry to be considered for drugs | str | None
 `DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | T
 `PadNoEvent` | Output zeros if the sample does not have any event within the inclusion period, if F then only output samples with at least one event | bool | F
-
-
-## Contents
-
-- [Creating matrices from endpoints](#endpt)
-- [Creating matrices from drug purchases](#drug)
-- [Creating matrices from other data sources](#other)
-- [To do items](#todo)
 
 [Go to top of page](#top)
 
@@ -220,8 +223,6 @@ J01
 where only `A02BC02` is an ATC code of full length which will be match as **exact**. The other columns will be counting occurences of sample purchasing **any** drug whose code starts with the given items. ie. `J01CA08`, `J01CE02`, `J01EA01` ... all start with `J01` so will be counted in that column.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "problem" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
-
- ses-documentation
 
 [Go to top of page](#top)
 
