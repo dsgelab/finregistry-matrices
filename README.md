@@ -176,18 +176,43 @@ where only `A02BC02` is an ATC code of full length which will be match as **exac
 [Go to top of page](#top)
 
 <a id='todo'></a>
-## create_ses_matrices.py
+## MakeRegFile.py
 
-This script creates finregistry-matrices from other data sources than endpoints and drug purchases.
+This script creates FinRegistry matrices from other data sources than endpoints and drug purchases. See figure below for a graphical summary of the scope of the variables that can be included in the output file. All the currently available variables are listed in the file
 
-### Requirements
+```
+documents/selected_variables_v2.csv
+```
+
+![Alt text](images/SES-matrix-schematic-270123.png?raw=true "Graphical summary of the variables that can be included to the matrix")
+
+### Requirements & installation
 
 The script runs using only packages installed in the `shared_env` environment of ePouta machines.
 
+As the script is pure Python, it does not require installation or compilation. The easiest way to use the script is to download the code from this repository as a zip-file to your own computer, and then transfer it to ePouta following the instructions written in the [Master document](https://docs.google.com/document/d/1I63zEoopDUIK9nJk-NkzeBhLp-nprPMrDQVQooJxxSU/edit#heading=h.5s2dfo3teq34).
+
+### Usage
+
+See sections below for more detailed instructions.
+
+```
+python /path/to/script/MakeRegFile.py -h
+usage: MakeRegFile.py [-h] [--configfile CONFIGFILE] [--logfile LOGFILE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --configfile CONFIGFILE
+                        Full path to the configuration file.
+  --logfile LOGFILE     Full path to the log file.
+```
+
 ### Required input
 
-Similarly to the other matrix generation scripts above, a configuration is required with the following entries:
+Similarly to the other matrix generation scripts above, a configuration file is required with the following entries:
+
 <pre>
+CpiFile <em> CpiFile </em>
 MinimalPhenotypeFile <em> MinimalPhenotypeFile </em>
 MarriageHistoryFile <em> MarriageHistoryFile </em>
 PedigreeFile <em> PedigreeFile </em>
@@ -197,7 +222,7 @@ EducationFile <em> EducationFile </em>
 SocialAssistanceFile <em> SocialAssistanceFile </em>
 PensionFile <em> PensionFile </em>
 BenefitsFile <em> BenefitsFile </em>
-EarningsFile <em> EarningsFile </em>
+IncomeFile <em> IncomeFile </em>
 RelativesFile <em> RelativesFile </em>
 SocialHilmoFile <em> SocialHilmoFile </em>
 BirthFile <em> BirthFile </em>
@@ -210,7 +235,23 @@ OutputBinary  <em> T/F </em>
 OutputAge <em> T/F </em>
 </pre>
 
-See an example file from `example/ses_config` to see which registry files are used as input. All other parameters work exactly as described above for generation of the drug and endpoint matrices except for `FeatureFile`. Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `xxx`.
+See an example file from `example/ses_config` to see which registry files are used as input. One should normally not need to change paths to the input files unless some registry file is updated to a newer version.
+
+The `SampleFile` specifies which individuals to include in the output and which follow-up periods to use for each of the individuals for collecting the variable values. Note that only data entries occurring within the individual-specific follow-up periods are used to construct the ouput. The same individual can appear in the `SampleFile` multiple times as long as the follow-up periods are different (FINREGISTRYID and follow-up start and end dates define unique keys). Below you can see how this file should be structured (notice that the column headers must be exactly as specified here and the columns should be comma-delimited):
+
+<pre>
+FINREGISTRYID,date_of_birth,start_of_followup,end_of_followup
+FRXXXXXX1,2001-01-01,2005-01-01,2020-12-31
+FRXXXXXX2,1991-02-05,2000-01-01,2015-12-31
+FRXXXXXX5,1984-06-13,2001-09-01,2004-12-31
+FRXXXXXX8,2007-10-29,2005-12-01,2021-12-31
+FRXXXXX10,1997-04-11,2001-04-01,2020-12-31
+...
+</pre>
+
+Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `documents/selected_variables_v2.csv`.
+
+All other parameters work exactly as described above for generation of the drug and endpoint matrices except for, `OutputEventCount` which has not been implemented yet.
 
 ### Output
 
@@ -219,7 +260,7 @@ Output matrices are formatted similarly as to what is described above for the dr
 ### Checks
 
 - Checks that all input files can be read before starting preprocessing.
-- Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries.
+- Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries (NOT IMPLEMENTED YET, USER NEEDS TO CHECK THEMSELVES!).
 
 [Go to top of page](#top)
 
