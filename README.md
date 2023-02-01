@@ -1,3 +1,4 @@
+<a id='top'></a>
 # finregistry-matrices
 
 Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in FinRegistry
@@ -34,6 +35,16 @@ Param | Description | Type | Default
 `PadNoEvent` | Output zeros if the sample does not have any event within the inclusion period, if F then only output samples with at least one event | bool | F
 
 
+## Contents
+
+- [Creating matrices from endpoints](#endpt)
+- [Creating matrices from drug purchases](#drug)
+- [Creating matrices from other data sources](#other)
+- [To do items](#todo)
+
+[Go to top of page](#top)
+
+<a id='endpt'></a>
 ## MakeEndPtFile.c
 Creates wide matrix (sample x feature) for disease endpoints from longitudinal file. 
 
@@ -162,7 +173,9 @@ FRXXXXXX2 2004  2 1 0 0 4 1 26.14 0.00  26.73 ...
 </pre>
 Please choose accordingly what you would like to output. The output file will be tab-seperated. 
 
+[Go to top of page](#top)
 
+<a id='drug'></a>
 ## MakeDrugFile.c
 Creates wide matrix (sample x feature) for drug from detailed longitudinal file. Works similarly to the endpoint file generator above.
 
@@ -208,3 +221,110 @@ where only `A02BC02` is an ATC code of full length which will be match as **exac
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*A known "problem" which Zhiyu is working on fixing is that if you input a drug list that has ATC codes encompassing each other, eg. a list with both `J01` and `J01CE`, then the purchase of, say, `J01CE02` or `J01CE01` in this case, will only be counted in only one of these two columns, depending on which code is found first through binary search in your list. She thinks it's a rather rare case and is not sure if anyone would want do something like that, but please don't if you see this!*
 
+ ses-documentation
+
+[Go to top of page](#top)
+
+<a id='other'></a>
+## MakeRegFile.py
+
+**This script is still quite lightly tested, so please report any issues and/or suggestions to Tuomo.**
+
+This script creates FinRegistry matrices from other data sources than endpoints and drug purchases. See figure below for a graphical summary of the scope of the variables that can be included in the output file. All the currently available variables are listed in the file
+
+```
+documents/selected_variables_v2.csv
+```
+
+![Alt text](images/SES-matrix-schematic-270123.png?raw=true "Graphical summary of the variables that can be included to the matrix")
+
+### Requirements & installation
+
+The script runs using only packages installed in the `shared_env` environment of ePouta machines.
+
+As the script is pure Python, it does not require installation or compilation. The easiest way to use the script is to download the code from this repository as a zip-file to your own computer, and then transfer it to ePouta following the instructions written in the [Master document](https://docs.google.com/document/d/1I63zEoopDUIK9nJk-NkzeBhLp-nprPMrDQVQooJxxSU/edit#heading=h.5s2dfo3teq34).
+
+### Usage
+
+See sections below for more detailed instructions.
+
+```
+python /path/to/script/MakeRegFile.py -h
+usage: MakeRegFile.py [-h] [--configfile CONFIGFILE] [--logfile LOGFILE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --configfile CONFIGFILE
+                        Full path to the configuration file.
+  --logfile LOGFILE     Full path to the log file.
+```
+
+### Required input
+
+Similarly to the other matrix generation scripts above, a configuration file is required with the following entries:
+
+<pre>
+CpiFile <em> CpiFile </em>
+MinimalPhenotypeFile <em> MinimalPhenotypeFile </em>
+MarriageHistoryFile <em> MarriageHistoryFile </em>
+PedigreeFile <em> PedigreeFile </em>
+LivingExtendedFile <em> LivingExtendedFile </em>
+SESFile <em> SESFile </em>
+EducationFile <em> EducationFile </em>
+SocialAssistanceFile <em> SocialAssistanceFile </em>
+PensionFile <em> PensionFile </em>
+BenefitsFile <em> BenefitsFile </em>
+IncomeFile <em> IncomeFile </em>
+RelativesFile <em> RelativesFile </em>
+SocialHilmoFile <em> SocialHilmoFile </em>
+BirthFile <em> BirthFile </em>
+SampleFile  <em> SampleList </em>
+FeatureFile <em> VariableList </em>
+OutputFile  <em> OutputPrefix </em>
+ByYear  <em> T/F </em>
+OutputEventCount  <em> T/F </em>
+OutputBinary  <em> T/F </em>
+OutputAge <em> T/F </em>
+</pre>
+
+See an example file from `example/ses_config` to see which registry files are used as input. One should normally not need to change paths to the input files unless some registry file is updated to a newer version.
+
+The `SampleFile` specifies which individuals to include in the output and which follow-up periods to use for each of the individuals for collecting the variable values. Note that only data entries occurring within the individual-specific follow-up periods are used to construct the ouput. The same individual can appear in the `SampleFile` multiple times as long as the follow-up periods are different (FINREGISTRYID and follow-up start and end dates define unique keys). Below you can see how this file should be structured (notice that the column headers must be exactly as specified here and the columns should be comma-delimited):
+
+<pre>
+FINREGISTRYID,date_of_birth,start_of_followup,end_of_followup
+FRXXXXXX1,2001-01-01,2005-01-01,2020-12-31
+FRXXXXXX2,1991-02-05,2000-01-01,2015-12-31
+FRXXXXXX5,1984-06-13,2001-09-01,2004-12-31
+FRXXXXXX8,2007-10-29,2005-12-01,2021-12-31
+FRXXXXX10,1997-04-11,2001-04-01,2020-12-31
+...
+</pre>
+
+Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `documents/selected_variables_v2.csv`.
+
+All other parameters work exactly as described above for generation of the drug and endpoint matrices except for, `OutputEventCount` which has not been implemented yet.
+
+### Output
+
+Output matrices are formatted similarly as to what is described above for the drug and endpoint matrices. Output is written into the path defined in the config file. Notice that output is only written for variables that are included in the `FeatureFile`. Also a log file is written including the config used to evoke the script and possible warnings. Checks performed are listed below.
+
+### Checks
+
+- Checks that all input files can be read before starting preprocessing.
+- Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries (NOT IMPLEMENTED YET, USER NEEDS TO CHECK THEMSELVES!).
+
+[Go to top of page](#top)
+
+<a id='todo'></a>
+## To do items
+
+Todo for Zhiyu (priority)
+- More testing and debugging on the code. She is sure that they are not robust up to the standard yet (high)
+- Make the program stop complaining about missing year (low)
+- Make the program take .gz longitudinal file as input (high)
+- Harmonise the parameter files into one yaml (medium)
+- Fix the drug list with different level of ATC code thing (medium)
+- Let Zhiyu know!
+
+[Go to top of page](#top)

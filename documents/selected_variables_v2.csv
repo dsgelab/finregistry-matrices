@@ -1,0 +1,156 @@
+variable_name,variable_description,variable_category,variable_type,source,possible_other_sources,to_impute,to_impute_andrea,Note
+FINREGISTRYID,Identifier,base,string,minimal phenotype,,0,0,
+date_of_birth,Date of birth,base,date,minimal phenotype,,0,0,
+sex,"Sex; 0 = male, 1 = female",base,binary,minimal phenotype,,0,(1),"There some people (spouses of index person that are not index person themself) with missing sex, maybe imputed those?"
+divorced,"Whether the individual has divorced; 0=no, 1=yes",family and relatives,binary,DVV marriage history,,1,0,
+married,"Whether the individual has married; 0=no, 1=yes",family and relatives,binary,DVV marriage history,,1,0,
+children,Whether the individual has children.,family and relatives,integer,pedigree,,1,0,"Is this longitudinal? Or just the toal number of children? If longitudinal, one can just have an indicatory 0/1 for having had children at a certain age. "
+zip_code,Zip code of place of residence,place of residence,categorical,DVV living extended,avoHilmo; social Hilmo,1,(1),impute only for missing zip codes
+urbanization_class,Urbanisation Class (1 or 2) - based on data from 2013 for the postal code area,place of residence,binary,DVV living extended,,1,,impute only for missing zip codes
+urban_rural_class_code,Urban/Rural Class Code - based on data from 2013 for the postal code area,place of residence,categorical,DVV living extended,,1,,impute only for missing zip codes
+sparse_small_house_area,Sparse Small House Area - based on data from 2013 for the postal code area,place of residence,binary,DVV living extended,,1,,impute only for missing zip codes
+apartment_building_area,Apartment building Area - based on data from 2013 for the postal code area,place of residence,binary,DVV living extended,,1,,impute only for missing zip codes
+small_house_area,Small house Area - based on data from 2013 for the postal code area,place of residence,binary,DVV living extended,,1,,impute only for missing zip codes
+demographic_dependency_ratio,"Demographic (or population) dependency ratio is the number of people aged under 15 and over 64 per hundred working-age people aged 15-64. The greater the number of children and/or retirement-age people, the higher the dependency ratio is. The source is Population Statistics, where the population consists of all people residing permanently within a geographical area (such as the whole country, region or sub-region). Those who according to the Population Information System are domiciled in Finland at the end of the year belong to the permanent resident population whatever their nationality, as do Finnish nationals temporarily residing abroad. Foreign nationals are domiciled in Finland if their stay is intended to last or has lasted at least twelve months. An asylum-seeker will not be granted a legal domicile until his/her application has been approved. Persons attached to foreign embassies, trade missions and consulates, as well as their family members and personal staff, are not counted among the resident population unless they are Finnish nationals. On the contrary, the Finnish staff of Finland's embassies and trade missions abroad and persons serving in the UN peacekeeping forces are counted among the resident population. - based on data from 2013 for the postal code area",place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+economic_dependency_ratio,"Economic dependency ratio gives the number of people who are outside the labour force or unemployed per hundred employed people. People who are unemployed or outside the labour force (retired people, children and those engaged in family duties) constitute the economically inactive population. The population is classified based on their principal activity into economically active and economically inactive population (the labour force comprises the employed and the unemployed). The classification is based on information about the individual's activity during the last week of the year. In register-based data collection, the individual's subjective view of their own activity does not receive the same weight as in survey-based data collection. An individual who works while studying may be classified as a student in a questionnaire survey, while in register-based data collection the individual will be classified as employed if the employment is reported to the register. Undeclared work is outside the register. However, it can be assumed that work that is not declared to the tax authorities is not reported in a questionnaire survey either. - based on data from 2013 for the postal code area",place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+general_at_risk_of_poverty_rate_for_the_municipality,"The indicator gives the percentage of persons living in households with low incomes in the total population of the geographical area. The risk-at-poverty threshold is set at 60% of each year's median equivalent disposable income of Finnish households (according to the adjusted OECD scale). Disposable income is calculated by adding together earned, entrepreneurial and property incomes and the income transfers received and by subtracting the income transfers paid. Equivalent income refers to all household members' combined disposable income divided by the total number of consumption units in the household. The statistics use the OECD's adjusted consumption unit scale, where the first adult of the household receives the weight 1, other over 13-year-olds receive the weight 0.5 and 0 to 13-year-olds receive the weight 0.3. Regional classification according to the latest statistical year. - based on data from 2013 for the postal code area",place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+intermunicipal_net_migration_1000_inhabitants,"The indicator gives intermunicipal net migration per thousand inhabitants. Population figures refer to mean population. Net migration is obtained by subtracting those leaving the region (out-migrants) from those moving to the region (in-migrants). Accordingly, net migration is positive if more people have moved to the region than left it. Migration between municipalities has been adjusted throughout the time series so that it correspond with the most recent regional divisions, i.e., migration between municipalities that have since merged has been eliminated from the figures. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland. - based on data from 2013 for the postal code area",place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+sale_of_alcoholic_beverages_per_capita,"The indicator describes the amount of alcoholic beverages sold at Alko stores and delivered to grocery stores, kiosks, service stations and licensed restaurants within the area of the municipality, as litres of pure alcohol per local inhabitant during year. It describes the documented consumption of alcohol per capita. Population proportions are calculated at THL based on the Population Statistics of Statistics Finland. - based on data from 2013 for the postal code area",place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+self_rated_health_moderate_or_poor_scaled_health_and_welfare_indicator,Self rated health - based on data from 2013 for the postal code area,place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+average_income_of_inhabitants,Average income of inhabitants (€) is the average annual income of inhabitants. (FROM: Statistics Finland 1km² dataset) - based on data from 2013 for the postal code area,place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+median_income_of_inhabitants,Median income of inhabitants (€) is obtained by listing inhabitants by the amount of disposable monetary income. Median income is the income of the middle inhabitant. An equal number of inhabitants remain on both sides of the middle inhabitant. (FROM: Statistics Finland 1km² dataset) - based on data from 2013 for the postal code area,place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+permanent_residents_fraction,Inhabitants are people residing permanently in the area. This is the radix of the data group. (FROM: Statistics Finland 1km² dataset) - based on data from 2013 for the postal code area,place of residence,continuous,DVV living extended,,1,,impute only for missing zip codes
+ses_self_employed,Socioeconomic status: self-employed,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_upperlevel,"Socioeconomic status: Upper-level employees with administrative, managerial, professional and related occupations",socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_lowerlevel,Socioeconomic status: Lower-level employees with administrative and clerical occupations,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_manual_workers,Socioeconomic status: manual workers,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_students,Socioeconomic status: students,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_pensioners,Socioeconomic status: pensioners,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_others,Socioeconomic status: others,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,1,0,
+ses_unknown,Socioeconomic status unknown,socioeconomic status,binary,SF Socioeconomic,birth registry; THL Social Assistance,0,1,
+edu_years,Highest completed education in education years,education,continous,SF Socioeconomic,,1,1,I would impute also those that are still in education but then check how the imputed results look like. If they don't make sense (e.g. they are imputed to very low values) then I would assign a number somehwere between highschool and university
+edu_ongoing,Education possibly ongoing (age<35),education,binary,age,,0,0,
+edufield_generic,Field of education: generic programmes and qualifications,education,binary,SF Socioeconomic,,1,0,
+edufield_education,Field of education: education,education,binary,SF Socioeconomic,,1,0,
+edufield_artshum,Field of education: Arts and humanities,education,binary,SF Socioeconomic,,1,0,
+edufield_socialsciences,"Field of education: Social sciences, journalism and information",education,binary,SF Socioeconomic,,1,0,
+edufield_businessadminlaw,"Field of education: Business, administration and law",education,binary,SF Socioeconomic,,1,0,
+edufield_science_math_stat,"Field of education: Natural sciences, mathematics and statistics",education,binary,SF Socioeconomic,,1,0,
+edufield_ict,Field of education: Information and communication technologies,education,binary,SF Socioeconomic,,1,0,
+edufield_engineering,"Field of education: Engineering, manufacturing and construction",education,binary,SF Socioeconomic,,1,0,
+edufield_agriculture,"Field of education: Agriculture, forestry, fisheries and veterinary",education,binary,SF Socioeconomic,,1,0,
+edufield_health,Field of education: Health and wellfare,education,binary,SF Socioeconomic,,1,0,
+edufield_services,Field of education: Services,education,binary,SF Socioeconomic,,1,0,
+edufield_NA,Field of education not found or unknown,education,binary,SF Socioeconomic,,0,1,
+mothertongue_fi,Mother tongue: Finnish,family and relatives,binary,Minimal phenotype,,1,0,Do you have missing mother tounge? that can be imputed
+mothertongue_swe,Mother tongue: Swedish,family and relatives,binary,Minimal phenotype,,1,0,
+mothertongue_rus,Mother tongue: Russian,family and relatives,binary,Minimal phenotype,,1,0,
+mothertongue_other,"Mother tongue: other than Finnish, Swedish or Russian",family and relatives,binary,Minimal phenotype,,1,0,
+received_any_income_support,"Received basic, actual, preventive or complementary income support",social benefits,binary,THL Social Assistance,,1,0,
+received_unemployment_allowance,Received earnings-related unemployment allowance,social benefits,binary,ETK Pension,,1,0,
+received_study_allowance,Received study allowance (only including finished degrees),social benefits,binary,ETK Pension,,1,0,
+received_sickness_allowance,Received sickness daily allowance,social benefits,binary,ETK Pension,,1,0,
+received_basic_unemployment_allowance,Received basic daily unemployment allowance,social benefits,binary,ETK Pension,,1,0,
+received_maternity_paternity_parental_allowance,"Received materntity, paternity or parental allowance",social benefits,binary,ETK Pension,,1,0,
+received_other_allowance,Received any other type of allowance (source: ETK pension),social benefits,binary,ETK Pension,,1,0,
+received_disability_pension,Received disability pension,social benefits,binary,ETK Pension,,1,0,
+received_any_social_benefit,Received any social benefit (excluding pension) listed in social assistance register or pension register,social benefits,binary,ETK Pension,,1,0,
+total_benefits,"Sum of social benefits received, indexed",social benefits,continous,THL Social Assistance,,,1,
+received_pension,Received any pension,income,binary,ETK Pension,,1,0,
+received_labor_income,Received any labor income,income,binary,ETK Pension,,1,0,
+total_income,"Sum of labor income, pension and social benefits, indexed",income,continous,ETK Pension; THL Social Assistance,,0,1,
+total_labor_income,"Sum of labor income, indexed",income,continous,ETK Pension,,,1,
+total_pension,"Sum of pension, indexed",income,continous,ETK Pension,,,1,
+emigrated,Emigrated,Place of residence,binary,DVV Relatives,,1,(1),"This can actually be quite interesting to impute as we expect under-reporting of emigration. I would create then a separate variable called ""guessed emigration"""
+miscarriages,Number of miscarriages,Pregnancy,integer,Birth registry,,1,0,For all the variables in the birth registry we need a special indicator for non-pregnant women and men
+terminated_pregnancies,Number of terminated pregnancies,Pregnancy,integer,Birth registry,,1,0,
+ectopic_pregnancies,Number of ectopic pregnancies,Pregnancy,integer,Birth registry,,1,0,
+stillborns,Number of births with at least one stillborn infant,Pregnancy,integer,Birth registry,,1,0,
+no_smoking_during_pregnancy,No smoking during pregnancy,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+quit_smoking_during_1st_trimester,Quit smoking during 1. trimester,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+smoked_after_1st_trimester,Smoked after 1. trimester,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+smoking_during_pregnancy_NA,Smoking information during pregnancy not available,Pregnancy,binary,Birth registry,,0,1,
+invitro_fertilization,In-vitro fertilization,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+thrombosis_prophylaxis,Thrombosis prophylaxis,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+anemia,Anemia during pregnancy,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+glucose_test_abnormal,Glucose test abnormal during pregnancy,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+no_analgesics,No analgesics during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+analgesics_info_missing,Information about analgesics during labor missing,Pregnancy,binary,Birth registry,,0,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+initiated_labor,Artificially initiated labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+promoted_labor,Promoted labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+puncture,Amniotic membrane puncture during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+oxytocin,Oxytocin during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+prostaglandin,Prostaglandin during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+extraction_of_placenta,Manual extraction of placenta,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+uterine_scraping,Uterine scraping,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+suturing,Suturing during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+prophylaxis,Intrapartum antiobiotic Group B Streptococcal prophylaxis,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+mother_antibiotics,Antiobiotic treatment of the mother during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+blood_transfusion,Blood transfusion during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+circumcision,Opening of circumcision during labor,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+hysterectomy,Hysterectomy,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+embolisation,Embolisation,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+vaginal_delivery,Vaginal delivery,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+vaginal_delivery_breech,"Vaginal delivery, breech",Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+forceps_delivery,Forceps-assisted delivery,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+vacuum_delivery,Vacuum-assisted delivery,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+planned_c_section,Delivery by planned C-section,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+urgent_c_section,Delivery by urgent C-section,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+emergency_c_section,Delivery by emergency C-section,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+not_planned_c_section,"Delivery by C-section, not planned (before 2004)",Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+mode_of_delivery_NA,Mode of delivery missing or unknown,Pregnancy,binary,Birth registry,,0,1,"Do you have missing values in these variables? if yes, then imputation make sense"
+placenta_praevia,Placenta praevia,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+ablatio_placentae,Ablatio placentae,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+eclampsia,Eclampsia,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+shoulder_dystocia,Shoulder dystocia,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+asphyxia,Asphyxia,Pregnancy,binary,Birth registry,,1,0,"Do you have missing values in these variables? if yes, then imputation make sense"
+live_born,Child born live,Pregnancy,binary,Birth registry,,1,0,
+stillborn_before_delivery,"Child stillborn, died before delivery",Pregnancy,binary,Birth registry,,1,0,
+stillborn_during_delivery,"Child stillborn, died during delivery",Pregnancy,binary,Birth registry,,1,0,
+stillborn_unknown,"Child stillborn, unknown if died before or during delivery",Pregnancy,binary,Birth registry,,1,0,
+birth_status_NA,Information missing about birth status of the child,Pregnancy,binary,Birth registry,,0,1,
+care_in_elderly_home,Type of long-term care: Care in an elderly home,Long-term care,binary,Social Hilmo,,0,0,
+assisted_living_elderly,Type of long-term care: Round-the-clock assisted living for the elderly,Long-term care,binary,Social Hilmo,,0,0,
+institutional_care_demented,Type of long-term care: Institutional care for the demented,Long-term care,binary,Social Hilmo,,0,0,
+enhanced_care_demented,Type of long-term care: Enhanced residential care for the demented,Long-term care,binary,Social Hilmo,,0,0,
+institutionalized_intellectual_disability,"Type of long-term care: Intellectual disability services, institutionalized care",Long-term care,binary,Social Hilmo,,0,0,
+assisted_intellectual_disability,"Type of long-term care: Intellectual disability services, assisted living",Long-term care,binary,Social Hilmo,,0,0,
+instructed_intellectual_disability,"Type of long-term care: Intellectual disability services, instructed living",Long-term care,binary,Social Hilmo,,0,0,
+supported_intellectual_disability,"Type of long-term care: Intellectual disability services, supported living",Long-term care,binary,Social Hilmo,,0,0,
+services_fos_substance_abusers,Type of long-term care: Services for substance abusers,Long-term care,binary,Social Hilmo,,0,0,
+rehabilitation,"Type of long-term care: Institutional care, rehabilitation",Long-term care,binary,Social Hilmo,,0,0,
+residential_care_housing,Type of long-term care: Residential care housing,Long-term care,binary,Social Hilmo,,0,0,
+psychiatric_residential_care_housing,Type of long-term care: Psychiatric residential care housing unit,Long-term care,binary,Social Hilmo,,0,0,
+247_residential_care_housing_under_65yo,Type of long-term care: Round-the-clock residential care housing (for less than 65 years old),Long-term care,binary,Social Hilmo,,0,0,
+247_psychiatric_residential_care,Type of long-term care: Round-the-clock care in a psychiatric residential care housing unit,Long-term care,binary,Social Hilmo,,0,0,
+unknown_long_term_care,Type of long-term care: unknown code,Long-term care,binary,Social Hilmo,,0,1,
+mr_physical_reasons,Main reason for treatment in social welfare services: physical reasons,Long-term care,binary,Social Hilmo,,0,0,
+mr_insufficient_self_care,Main reason for treatment in social welfare services: insufficient self-care abilities (hygiene),Long-term care,binary,Social Hilmo,,0,0,
+mr_deficient_locomotion,Main reason for treatment in social welfare services: deficient locomotion,Long-term care,binary,Social Hilmo,,0,0,
+mr_nervous_system,Main reason for treatment in social welfare services: nervous system related reasons,Long-term care,binary,Social Hilmo,,0,0,
+mr_forgetfullness,Main reason for treatment in social welfare services: forgetfullness,Long-term care,binary,Social Hilmo,,0,0,
+mr_mental_confusion,Main reason for treatment in social welfare services: mental confusion,Long-term care,binary,Social Hilmo,,0,0,
+mr_deficiencies_in_communication,"Main reason for treatment in social welfare services: deficiencies in communication (speech, hearing, eyesight)",Long-term care,binary,Social Hilmo,,0,0,
+mr_dementia,Main reason for treatment in social welfare services: dementia,Long-term care,binary,Social Hilmo,,0,0,
+mr_psychic_social_reasons,Main reason for treatment in social welfare services: psychic-social reasons,Long-term care,binary,Social Hilmo,,0,0,
+mr_depression,Main reason for treatment in social welfare services: depression,Long-term care,binary,Social Hilmo,,0,0,
+mr_other_psychatric,Main reason for treatment in social welfare services: other psychiatric disease/symptom,Long-term care,binary,Social Hilmo,,0,0,
+mr_loneliness_insecurity,Main reason for treatment in social welfare services: loneliness/insecurity,Long-term care,binary,Social Hilmo,,0,0,
+mr_difficulties_with_housing,Main reason for treatment in social welfare services: difficulties with housing,Long-term care,binary,Social Hilmo,,0,0,
+mr_lack_of_help_from_family,Main reason for treatment in social welfare services: lack of help from the family,Long-term care,binary,Social Hilmo,,0,0,
+mr_caretaker_vacation,Main reason for treatment in social welfare services: vacation of the caretaker,Long-term care,binary,Social Hilmo,,0,0,
+mr_lack_of_services,Main reason for treatment in social welfare services: lack of services for those living at home,Long-term care,binary,Social Hilmo,,0,0,
+mr_lack_of_place_of_care,Main reason for treatment in social welfare services: lack of appropriate place of care,Long-term care,binary,Social Hilmo,,0,0,
+mr_rehabilitation,Main reason for treatment in social welfare services: rehabilitiation,Long-term care,binary,Social Hilmo,,0,0,
+mr_med_rehabilitation,Main reason for treatment in social welfare services: medical rehabilitation,Long-term care,binary,Social Hilmo,,0,0,
+mr_accident,Main reason for treatment in social welfare services: accident,Long-term care,binary,Social Hilmo,,0,0,
+mr_somatic,Main reason for treatment in social welfare services: investigation and treatment of a somatic disease,Long-term care,binary,Social Hilmo,,0,0,
+mr_alcohol_use,Main reason for treatment in social welfare services: alcohol use issues,Long-term care,binary,Social Hilmo,,0,0,
+mr_drug_use,Main reason for treatment in social welfare services: drug use issues,Long-term care,binary,Social Hilmo,,0,0,
+mr_med_abuse,Main reason for treatment in social welfare services: abuse of medications,Long-term care,binary,Social Hilmo,,0,0,
+mr_polysubstance_abuse,Main reason for treatment in social welfare services: polysubstance use issues,Long-term care,binary,Social Hilmo,,0,0,
+mr_other_addiction,Main reason for treatment in social welfare services: other addiction,Long-term care,binary,Social Hilmo,,0,0,
+mr_substance_use_family,Main reason for treatment in social welfare services: substance use issues of a family member or something similar,Long-term care,binary,Social Hilmo,,0,0,
+mr_NA,Main reason for treatment in social welfare services: missing,Long-term care,binary,Social Hilmo,,0,1,
+long_term_care_decision,Long-term care decision or a lease in an institutional housing unit,Long-term care,binary,Social Hilmo,,0,0,
+long_term_care_duration,Total treatment days for a calendar year,Long-term care,integer,Social Hilmo,,0,0,
