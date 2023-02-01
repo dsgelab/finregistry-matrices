@@ -9,7 +9,6 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 - [Creating matrices from endpoints](#endpt)
 - [Creating matrices from drug purchases](#drug)
 - [Creating matrices from other data sources](#other)
-- [To do items](#todo)
 
 <a id='intro'></a>
 ## Introduction
@@ -314,18 +313,5 @@ Output matrices are formatted similarly as to what is described above for the dr
 
 - Checks that all input files can be read before starting preprocessing.
 - Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries (NOT IMPLEMENTED YET, USER NEEDS TO CHECK THEMSELVES!).
-
-[Go to top of page](#top)
-
-<a id='todo'></a>
-## To do items
-
-Todo for Zhiyu (priority)
-- More testing and debugging on the code. She is sure that they are not robust up to the standard yet (high)
-- Make the program stop complaining about missing year (low)
-- Make the program take .gz longitudinal file as input (high)
-- Harmonise the parameter files into one yaml (medium)
-- Fix the drug list with different level of ATC code thing (medium)
-- Let Zhiyu know!
 
 [Go to top of page](#top)
