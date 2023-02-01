@@ -175,8 +175,10 @@ where only `A02BC02` is an ATC code of full length which will be match as **exac
 
 [Go to top of page](#top)
 
-<a id='todo'></a>
+<a id='other'></a>
 ## MakeRegFile.py
+
+**This script is still quite lightly tested, so please report any issues and/or suggestions to Tuomo.**
 
 This script creates FinRegistry matrices from other data sources than endpoints and drug purchases. See figure below for a graphical summary of the scope of the variables that can be included in the output file. All the currently available variables are listed in the file
 
@@ -255,7 +257,7 @@ All other parameters work exactly as described above for generation of the drug 
 
 ### Output
 
-Output matrices are formatted similarly as to what is described above for the drug and endpoint matrices. Output is written into the path defined in the config file. Also a log file is written including the config used to evoke the script and possible warnings. It is recommended to check the log file after each run. Checks performed are listed below.
+Output matrices are formatted similarly as to what is described above for the drug and endpoint matrices. Output is written into the path defined in the config file. Notice that output is only written for variables that are included in the `FeatureFile`. Also a log file is written including the config used to evoke the script and possible warnings. Checks performed are listed below.
 
 ### Checks
 
