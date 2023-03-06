@@ -69,7 +69,7 @@ char *YearDiffToDate(time_t Time1, double YearDiff) {
 	time_t Time2 = Time1 + (60*60*24*365.25)*YearDiff;
 	struct tm *OutTime = gmtime(&Time2);
 	static char OutDate[IDandTimeLen];
-	sprintf(OutDate, "%d-%d-%d", OutTime->tm_year + 1900, OutTime->tm_mon, OutTime->tm_mday);
+	sprintf(OutDate, "%d-%d-%d", OutTime->tm_year + 1900, (OutTime->tm_mon) + 1, OutTime->tm_mday);
 	return(OutDate);
 }
 
@@ -320,18 +320,30 @@ void UpdateRecordInfo(int m, int iFeature, double tmpAge, time_t SampleDOB) {
 void WriteOutput(long int bin, long int index, int SampleYear) {
 	int i, k, nRec;
 	char SampleID[IDandTimeLen];
+	char DateLower[IDandTimeLen];
+	char DateUpper[IDandTimeLen];
+	char DateDoB[IDandTimeLen];
+	time_t SampleDOB;
+
 	double lower; double upper;
 	FILE *OutPut;
 	OutPut = fopen(OutFile, "a");
+
 	strcpy(SampleID, SampleList[bin][index].FINREGISTRYID);
+	SampleDOB = SampleList[bin][index].DateOfBirth;
+	sprintf(DateDoB, "%s", YearDiffToDate(SampleDOB, 0.0));
 	nRec = SampleList[bin][index].nRec;
+
 	for (i = 0; i < nRec; i++) {
 		lower = SampleList[bin][index].lower[i];
+		sprintf(DateLower, "%s", YearDiffToDate(SampleDOB, lower));
 		upper = SampleList[bin][index].upper[i];
+		sprintf(DateUpper, "%s", YearDiffToDate(SampleDOB, upper));
+
 		if (ByYear == 1) 
-			fprintf(OutPut, "%s\t%.2f\t%.2f\t%d\t", SampleID, lower, upper, SampleYear);
+			fprintf(OutPut, "%s\t%s\t%s\t%s\t%d\t", SampleID, DateDoB, DateLower, DateUpper, SampleYear);
 		else 
-			fprintf(OutPut, "%s\t%.2f\t%.2f\t", SampleID, lower, upper);
+			fprintf(OutPut, "%s\t%s\t%s\t%s\t", SampleID, DateDoB, DateLower, DateUpper);
 
 		if (WithBinary + WithNEvent == 1) {
 			if ((WithBinary == 1) && (WithNEvent == 0)) {
@@ -417,9 +429,9 @@ int main(int argc, char const *argv[]) {
         exit(0);
     }
     if (ByYear == 1)
-		fprintf(OutPut, "FINREGISTRYID\tLowerAge\tUpperAge\tYear\t");
+		fprintf(OutPut, "FINREGISTRYID\tDateOfBirth\tLowerDate\tUpperDate\tYear\t");
 	else 
-		fprintf(OutPut, "FINREGISTRYID\tLowerAge\tUpperAge\t");
+		fprintf(OutPut, "FINREGISTRYID\tDateOfBirth\tLowerDate\tUpperDate\t");
 
 	if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
@@ -582,4 +594,3 @@ int main(int argc, char const *argv[]) {
 	if ((RecordIncFlag == 1) && (SampleIncFlag == 1))
 		WriteOutput(iSample[0], iSample[1], SampleYear);
 }
-
