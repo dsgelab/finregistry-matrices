@@ -53,7 +53,7 @@ Creates wide matrix (sample x feature) for disease endpoints from longitudinal f
 **This is still a _(hopefully)_ working prototype, please let Zhiyu know if anything goes wrong when you are using it. She will try to work it out (_hopefully_).** 
 
 To Compile, download the code and run 
-<pre>gcc MakeEndPtFile.c -o <em>Where/and/what/you/want/it/to/be</em> -lm</pre>
+<pre>gcc MakeEndPtFile.c -o <em>Where/and/what/you/want/it/to/be</em> -lm -fPIC</pre>
 
 To excute, run
 <pre>./<em>Where/and/what/you/want/it/to/be</em> <em>ParamFile</em></pre>
@@ -184,7 +184,7 @@ Creates wide matrix (sample x feature) for drug from detailed longitudinal file.
 **This is again just a prototype. Zhiyu has recently tested it on larger scale (~3M) samples and it was working for her. But please let her know if you find some of the many problems.** 
 
 To Compile, download the code run 
-<pre>gcc MakeDrugFile.c -o <em>Where/and/what/you/want/it/to/be</em> -lm</pre>
+<pre>gcc MakeDrugFile.c -o <em>Where/and/what/you/want/it/to/be</em> -lm -fPIC</pre>
 
 To excute, run
 <pre>./<em>Where/and/what/you/want/it/to/be</em> <em>ParamFile</em></pre>
