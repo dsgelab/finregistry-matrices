@@ -42,7 +42,7 @@ Param | Description | Type | Default
 `DrugOutputAge` | Drug output file with age at first purchase | bool | F
 `RegSource` | Source registry to be considered for drugs | str | None
 `DrugMultiplyPackage` | Drug output file with counts weighted by the number of packages | bool | T
-`PadNoEvent` | Output zeros if the sample does not exist in the longitudinal file, if F then only samples appear in the longitudinal file will be int the output. | bool | F
+`PadNoEvent` | Output zeros if the sample does not exist in the longitudinal file, if F then only samples appear in the longitudinal file will be in the output. | bool | F
 
 [Go to top of page](#top)
 
