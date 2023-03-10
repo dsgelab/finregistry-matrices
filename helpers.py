@@ -936,6 +936,8 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     start = time()
     ses = pd.read_csv(params['SESFile'])
     #keep only rows corresponding to IDs in samples
+    #depending on the version, some source files have some column names in uppercase, some in lowercase
+    if 'FINREGISTRYID' not in ses.columns: ses = ses.rename(columns={'finregistryid':'FINREGISTRYID'})
     ses = ses[ses['FINREGISTRYID'].isin(ID_set)]
     #skip rows with missing year
     print(ses.loc[ses['vuosi'].isnull()])
@@ -1193,7 +1195,9 @@ def readEdu(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #edufield_NA = Field of education not found or unknown
     
     start = time()
-    edu = pd.read_csv(params['EducationFile'],usecols=["FINREGISTRYID","vuosi","iscfi2013","kaste_t2"],dtype={'iscfi2013':str,'kaste_t2':str},encoding = 'ISO-8859-1')
+    edu = pd.read_csv(params['EducationFile'],usecols=lambda x: x.lower() in ["finregistryid","vuosi","iscfi2013","kaste_t2"],dtype={'iscfi2013':str,'kaste_t2':str},encoding = 'ISO-8859-1')
+        #depending on the version, some source files have some column names in uppercase, some in lowercase
+    if 'FINREGISTRYID' not in edu.columns: edu = edu.rename(columns={'finregistryid':'FINREGISTRYID'})
     #keep only rows corresponding to IDs in samples
     edu = edu[edu['FINREGISTRYID'].isin(ID_set)]
     #for both edulevel and edufield, keep only the first/2 first character of the code
