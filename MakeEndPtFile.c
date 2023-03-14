@@ -200,6 +200,7 @@ void ReadList() {
 	    exit(0);
 	}
 	else {
+		fgets(buffer, sizeof(buffer), Sample);
 		i = 0;
 		while (fgets(buffer, sizeof(buffer), Sample) != NULL) {
 			p = buffer;
