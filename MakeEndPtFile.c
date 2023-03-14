@@ -69,7 +69,22 @@ char *YearDiffToDate(time_t Time1, double YearDiff) {
 	time_t Time2 = Time1 + (60*60*24*365.25)*YearDiff;
 	struct tm *OutTime = gmtime(&Time2);
 	static char OutDate[IDandTimeLen];
-	sprintf(OutDate, "%d-%d-%d", OutTime->tm_year + 1900, (OutTime->tm_mon) + 1, OutTime->tm_mday);
+	static char Year[IDandTimeLen];
+	static char Month[IDandTimeLen];
+	static char Day[IDandTimeLen];
+	sprintf(Year, "%d", OutTime->tm_year + 1900);
+	if ((OutTime->tm_mon) + 1 >= 10)
+		sprintf(Month, "%d", (OutTime->tm_mon) + 1);
+	else
+		sprintf(Month, "0%d", (OutTime->tm_mon) + 1);
+
+	if (OutTime->tm_mday >= 10)
+		sprintf(Day, "%d", OutTime->tm_mday);
+	else
+		sprintf(Day, "0%d", OutTime->tm_mday);
+
+	// sprintf(OutDate, "%d-%d-%d", OutTime->tm_year + 1900, (OutTime->tm_mon) + 1, OutTime->tm_mday);
+	sprintf(OutDate, "%s-%s-%s", Year, Month, Day);
 	return(OutDate);
 }
 
@@ -341,9 +356,9 @@ void WriteOutput(long int bin, long int index, int SampleYear) {
 		sprintf(DateUpper, "%s", YearDiffToDate(SampleDOB, upper));
 
 		if (ByYear == 1) 
-			fprintf(OutPut, "%s\t%s\t%s\t%s\t%d\t", SampleID, DateDoB, DateLower, DateUpper, SampleYear);
+			fprintf(OutPut, "%s,%s,%s,%s,%d,", SampleID, DateDoB, DateLower, DateUpper, SampleYear);
 		else 
-			fprintf(OutPut, "%s\t%s\t%s\t%s\t", SampleID, DateDoB, DateLower, DateUpper);
+			fprintf(OutPut, "%s,%s,%s,%s,", SampleID, DateDoB, DateLower, DateUpper);
 
 		if (WithBinary + WithNEvent == 1) {
 			if ((WithBinary == 1) && (WithNEvent == 0)) {
@@ -351,11 +366,11 @@ void WriteOutput(long int bin, long int index, int SampleYear) {
 					SampleFeature[i][k] = (SampleFeature[i][k] > 0.0 ? 1 : 0);
 			}
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%d\t", SampleFeature[i][k]);
+				fprintf(OutPut, "%d,", SampleFeature[i][k]);
 			if (WithAge == 1) {
-				fprintf(OutPut, "%d\t", SampleFeature[i][nFeature-1]);
+				fprintf(OutPut, "%d,", SampleFeature[i][nFeature-1]);
 				for (k = 0; k < nFeature-1; k++) 
-					fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+					fprintf(OutPut, "%.2f,", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
 				fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
 			}
 			else
@@ -363,19 +378,19 @@ void WriteOutput(long int bin, long int index, int SampleYear) {
 		}
 		else if ((WithBinary == 1) && (WithNEvent == 1)) {
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%d\t%d\t", SampleFeature[i][k], (SampleFeature[i][k] > 0.0 ? 1 : 0));
+				fprintf(OutPut, "%d,%d,", SampleFeature[i][k], (SampleFeature[i][k] > 0.0 ? 1 : 0));
 			if (WithAge == 1) {
-				fprintf(OutPut, "%d\t%d\t", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
+				fprintf(OutPut, "%d,%d,", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
 				for (k = 0; k < nFeature-1; k++) 
-					fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+					fprintf(OutPut, "%.2f,", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
 				fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
 			}
 			else
-				fprintf(OutPut, "%d\t%d\n", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
+				fprintf(OutPut, "%d,%d\n", SampleFeature[i][nFeature-1], (SampleFeature[i][nFeature-1] > 0.0 ? 1 : 0));
 		}
 		else if ((WithBinary + WithNEvent == 0) && (WithAge == 1)) {
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%.2f\t", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
+				fprintf(OutPut, "%.2f,", ((SampleFeature[i][k] > 0.0) ? SampleOnsetAge[i][k] : -9.0));
 			fprintf(OutPut, "%.2f\n", ((SampleFeature[i][nFeature-1] > 0.0) ? SampleOnsetAge[i][nFeature-1] : -9.0));
 		}
 	}
@@ -429,29 +444,29 @@ int main(int argc, char const *argv[]) {
         exit(0);
     }
     if (ByYear == 1)
-		fprintf(OutPut, "FINREGISTRYID\tDateOfBirth\tLowerDate\tUpperDate\tYear\t");
+		fprintf(OutPut, "FINREGISTRYID,date_of_birth,start_of_followup,end_of_followup,Year,");
 	else 
-		fprintf(OutPut, "FINREGISTRYID\tDateOfBirth\tLowerDate\tUpperDate\t");
+		fprintf(OutPut, "FINREGISTRYID,date_of_birth,start_of_followup,end_of_followup,");
 
 	if ((WithBinary == 1) && (WithNEvent == 1)) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%s_nEvent\t%s\t", FeatureList[k], FeatureList[k]);
+			fprintf(OutPut, "%s_nEvent,%s,", FeatureList[k], FeatureList[k]);
 		if (WithAge == 1) {
-			fprintf(OutPut, "%s_nEvent\t%s\t", FeatureList[nFeature-1], FeatureList[nFeature-1]);
+			fprintf(OutPut, "%s_nEvent,%s,", FeatureList[nFeature-1], FeatureList[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+				fprintf(OutPut, "%s_OnsetAge,", FeatureList[k]);
 			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
 		}
 		else
-			fprintf(OutPut, "%s_nEvent\t%s\n", FeatureList[nFeature-1], FeatureList[nFeature-1]);
+			fprintf(OutPut, "%s_nEvent,%s\n", FeatureList[nFeature-1], FeatureList[nFeature-1]);
 	}
 	else if (WithNEvent == 1) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%s_nEvent\t", FeatureList[k]);
+			fprintf(OutPut, "%s_nEvent,", FeatureList[k]);
 		if (WithAge == 1) {
-			fprintf(OutPut, "%s_nEvent\t", FeatureList[nFeature-1]);
+			fprintf(OutPut, "%s_nEvent,", FeatureList[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+				fprintf(OutPut, "%s_OnsetAge,", FeatureList[k]);
 			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
 		}
 		else
@@ -459,11 +474,11 @@ int main(int argc, char const *argv[]) {
 	}
 	else if (WithBinary == 1) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%s\t", FeatureList[k]);
+			fprintf(OutPut, "%s,", FeatureList[k]);
 		if (WithAge == 1) {
-			fprintf(OutPut, "%s\t", FeatureList[nFeature-1]);
+			fprintf(OutPut, "%s,", FeatureList[nFeature-1]);
 			for (k = 0; k < nFeature-1; k++) 
-				fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+				fprintf(OutPut, "%s_OnsetAge,", FeatureList[k]);
 			fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
 		}
 		else
@@ -471,7 +486,7 @@ int main(int argc, char const *argv[]) {
 	}
 	else if (WithAge == 1) {
 		for (k = 0; k < nFeature-1; k++) 
-			fprintf(OutPut, "%s_OnsetAge\t", FeatureList[k]);
+			fprintf(OutPut, "%s_OnsetAge,", FeatureList[k]);
 		fprintf(OutPut, "%s_OnsetAge\n", FeatureList[nFeature-1]);
 	}
 	fclose(OutPut);
