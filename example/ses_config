@@ -1,9 +1,9 @@
-MinimalPhenotypeFile	/data/processed_data/minimal_phenotype/minimal_phenotype_2022-03-28.feather
+MinimalPhenotypeFile	/data/processed_data/minimal_phenotype/minimal_phenotype_main_dec2022.csv
 MarriageHistoryFile	/data/processed_data/dvv/Tulokset_1900-2010_tutkhenk_aviohist.txt.finreg_IDsp
 PedigreeFile	/data/processed_data/dvv/dvv_pedigree_withfamid.20220501.tsv
 LivingExtendedFile	/data/processed_data/dvv/dvv_living_extended/dvv_ext_postalcode.csv
-SESFile	/data/processed_data/sf_socioeconomic/sose_u1442_a.csv.finreg_IDsp
-EducationFile	/data/processed_data/sf_socioeconomic/tutkinto_u1442_a.csv.finreg_IDsp
+SESFile	/data/processed_data/sf_socioeconomic/ses_2023-02-28.csv
+EducationFile	/data/processed_data/sf_socioeconomic/education_2023-02-28.csv
 SocialAssistanceFile	/data/processed_data/thl_social_assistance/3214_FinRegistry_toitu_MattssonHannele07122020.csv.finreg_IDsp
 PensionFile	/data/processed_data/etk_pension/elake_2022-05-10.feather
 BenefitsFile	/data/processed_data/etk_pension/palkaton_2022-05-10.feather
