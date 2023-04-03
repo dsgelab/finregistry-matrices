@@ -804,7 +804,7 @@ def readLiving(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #Read in the variables from the DVV living extended
     #this function currently creates 13 variables, which are:
     #zip_code = Zip code of place of residence
-    #urbanization_class = Urbanisation Class (1 or 2)
+    #urbanization_class = Urbanisation Class (1 or 2), original value 1 is coded as 0, original value 2 is coded as 1.
     #urban_rural_class_code = Urban/Rural Class Code
     #sparse_small_house_area = Sparse Small House Area (binary indicator)
     #apartment_building_area = Apartment building Area (binary indicator)
@@ -915,6 +915,8 @@ def readLiving(data,params,cpi,requested_features,ID_set,data_ind_dict):
         if out_cols[i] in requested_features: data[out_cols[i]] = new_cols[out_cols[i]]
     if params['OutputAge']=='T': data['zip_code_OnsetAge'] = zip_code_OnsetAge
 
+    #replace the values of urbanization_class
+    data = data.replace({'urbanization_class':{1:0,2:1}})
     end = time()
     print('DVV living extended variables preprocessed in '+str(end-start)+" s")
     
@@ -1478,7 +1480,8 @@ def readLongterm(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #keep only rows corresponding to IDs in samples
     longterm = longterm[longterm['TNRO'].isin(ID_set)]
     #preprocess TUSYY1 to harmonize the codes used
-    longterm['TUSYY1'].replace(inplace=True,to_replace='"',regex=False,value='')
+    longterm['TUSYY1'] = longterm['TUSYY1'].str.replace('"','',regex=False)
+    longterm['TUSYY1'] = longterm['TUSYY1'].str.replace(',','',regex=False)
     longterm['TUSYY1'].fillna(-1,inplace=True)
     longterm['TUSYY1'] = longterm['TUSYY1'].astype(float).astype(int)
     longterm['PITK'] = longterm['PITK'].map({'K':1,'E':0,1.0:np.nan,2.0:np.nan,3.0:np.nan,4.0:np.nan,5.0:np.nan,6.0:np.nan})
