@@ -262,7 +262,7 @@ optional arguments:
 
 ### Required input
 
-Similarly to the other matrix generation scripts above, a configuration file is required with the following entries:
+Similarly to the other matrix generation scripts above, a configuration file (**must be tab-delimited**) is required with the following entries:
 
 <pre>
 CpiFile <em> CpiFile </em>
