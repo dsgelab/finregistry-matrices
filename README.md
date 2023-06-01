@@ -302,7 +302,7 @@ FRXXXXX10,1997-04-11,2001-04-01,2020-12-31
 ...
 </pre>
 
-Here, `FeatureFile` is a file with one column listing all variables to use in the output (see example from `example/ses_features`). All implemented features are listed in `documents/selected_variables_v2.csv`.
+Here, `FeatureFile` is a file with one column listing all variables to use in the output. See example from `documents/selected_variables_v2.csv`, which contains all the implemented features. If you don't need all of the features, you can make the code run faster by including only the rows that you need.
 
 All other parameters work exactly as described above for generation of the drug and endpoint matrices except for, `OutputEventCount` which has not been implemented yet.
 
