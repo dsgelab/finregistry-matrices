@@ -10,7 +10,7 @@ from collections import Counter
 
 def readConfig(filepath):
     #Reads in the configuration file.
-    #Checks that files provided can be opened.
+    #Checks that files provided can be opened.f
     #If some files cannot be opened, returns isOk = False
     #which halts excecution of MakeRegFile.
 
@@ -31,7 +31,6 @@ def readConfig(filepath):
                 if key.count('OutputFile')>0: mode = 'w'
                 error,msg = testFileOpens(value,mode)
                 if error: return False,{},msg
-                
             params[key] = value
     
     return True,params,""
@@ -40,29 +39,29 @@ def getSamplesFeatures(params):
     #Read in the IDs of samples and variables to use in the output
     #return initialized output dataframe
     start = time()
-    samples = pd.read_csv(params['SampleFile'])
+    samples = pd.read_csv(params['SampleFile'], sep="\t")
     ID_set = set(list(samples['FINREGISTRYID']))
     #convert the date columns to datetime
     samples['start_of_followup'] = pd.to_datetime(samples['start_of_followup'])
     samples['end_of_followup'] = pd.to_datetime(samples['end_of_followup'])
     samples['date_of_birth'] = pd.to_datetime(samples['date_of_birth'])
-    #Read in sex from minimal phenotype file
+    #Read in SEX from minimal phenotype file
     mpfpath = params['MinimalPhenotypeFile']
-    usecols = ['FINREGISTRYID','sex','mother_tongue']
+    usecols = ['FINREGISTRYID','SEX','MOTHER_TONGUE']
     if mpfpath.count('.feather')>0: mpf = pd.read_feather(mpfpath,columns=usecols)
     else: mpf = pd.read_csv(mpfpath,usecols=usecols)
     mpf = mpf[mpf['FINREGISTRYID'].isin(ID_set)]
     #one-hot encode mother tongues
-    mpf = pd.get_dummies(mpf,columns=['mother_tongue'])
-
+    mpf = pd.get_dummies(mpf,columns=['MOTHER_TONGUE'])
+    
     #rename mother tongue columns
-    mpf.rename(columns={'mother_tongue_fi':'mothertongue_fi','mother_tongue_sv':'mothertongue_swe','mother_tongue_ru':'mothertongue_rus','mother_tongue_other':'mothertongue_other'},inplace=True)
-    #mpf['sex'] = mpf['sex'].astype('int') #This does not work for missing values...
-    #samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
+    mpf.rename(columns={'MOTHER_TONGUE_fi':'mothertongue_fi','MOTHER_TONGUE_sv':'mothertongue_swe','MOTHER_TONGUE_ru':'mothertongue_rus','MOTHER_TONGUE_other':'mothertongue_other'},inplace=True)
+    #mpf['SEX'] = mpf['SEX'].astype('int') #This does not work for missing values...
+    #samples =  samples.merge(mpf[['FINREGISTRYID','SEX']],how='left',on='FINREGISTRYID')
 
     if params['ByYear']=='F':
         data =  samples.merge(mpf,how='left',on='FINREGISTRYID')
-        samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
+        samples =  samples.merge(mpf[['FINREGISTRYID','SEX']],how='left',on='FINREGISTRYID')
         data_ind_dict = {} #key = ID, value = [list of indices for this ID]
         for index,row in data.iterrows():
             ID = row['FINREGISTRYID']
@@ -70,14 +69,14 @@ def getSamplesFeatures(params):
             else: data_ind_dict[ID].append(index)
             
     elif params['ByYear']=='T':
-        samples =  samples.merge(mpf[['FINREGISTRYID','sex']],how='left',on='FINREGISTRYID')
+        samples =  samples.merge(mpf[['FINREGISTRYID','SEX']],how='left',on='FINREGISTRYID')
         #mother tongues are not repeated for every year
         data_ind_dict = {} #key = (FINREGISTRYID,year), value = [list of indices for this ID]
         samples_ind_dict = {} #key = (FINREGISTRYID,start_of_followup,end_of_followup)
         data = pd.DataFrame()
         IDs = []
         years = []
-        sexs = []
+        SEXs = []
         dobs = []
         starts = []
         ends = []
@@ -90,7 +89,7 @@ def getSamplesFeatures(params):
             for year in range(start_year,end_year+1):
                 IDs.append(row['FINREGISTRYID'])
                 dobs.append(row['date_of_birth'])
-                sexs.append(row['sex'])
+                SEXs.append(row['SEX'])
                 starts.append(row['start_of_followup'])
                 ends.append(row['end_of_followup'])
                 years.append(year)
@@ -101,7 +100,7 @@ def getSamplesFeatures(params):
         data['FINREGISTRYID'] = IDs
         data['year'] = years
         data['date_of_birth'] = dobs
-        data['sex'] = sexs
+        data['SEX'] = SEXs
         data['start_of_followup'] = starts
         data['end_of_followup'] = ends
 
@@ -152,15 +151,15 @@ def getOnsetAge(dob,doo):
     return diff.days/365.0
 
 def readMinimalPheno(params,data):
-    #Read in sex from minimal phenotype file
-    mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','sex'])
+    #Read in SEX from minimal phenotype file
+    mpf = pd.read_feather(params['MinimalPhenotypeFile'],columns=['FINREGISTRYID','SEX'])
     if params['ByYear']=='F': return data.merge(mpf,how='left',on='FINREGISTRYID')
     elif params['ByYear']=='T':
-        sexs = []
+        SEXs = []
         for index,row in data.iterrows():
             ID = row['FINREGISTRYID']
-            sexs.append(mpf.loc[mpf['FINREGISTRYID']==ID]['sex'])
-        data['sex'] = sexs
+            SEXs.append(mpf.loc[mpf['FINREGISTRYID']==ID]['SEX'])
+        data['SEX'] = SEXs
         return data
 
 def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
@@ -171,14 +170,14 @@ def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #total_pension = Sum of pensions, indexed
     #total_income = Sum of labor income, pension and social benefits, indexed
     start = time()
-    keep_cols = ['id','apvm','ppvm','ptma','ltma','jkma','tksyy1']
+    keep_cols = ['FINREGISTRYID','APVM','PPVM','PTMA','LTMA','JKMA','TKSYY1']
     pension = pd.read_feather(params['PensionFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    pension = pension[pension['id'].isin(ID_set)]
+    pension = pension[pension['FINREGISTRYID'].isin(ID_set)]
     print("Pension, number or data rows: "+str(len(pension)))
     #convert date strings to datetime
-    pension['apvm'] = pd.to_datetime(pension['apvm'])
-    pension['ppvm'] = pd.to_datetime(pension['ppvm'])
+    pension['APVM'] = pd.to_datetime(pension['APVM'])
+    pension['PPVM'] = pd.to_datetime(pension['PPVM'])
 
     received_disability_pension = [0 for i in range(len(data))]
     received_pension = [0 for i in range(len(data))]
@@ -196,10 +195,10 @@ def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
         #First read in data for all years covered by the entry
         #then determine which rows of the dataframe data need to be updated
         #This means different approaches for byYear=T/F
-        ID = p_row['id']
+        ID = p_row['FINREGISTRYID']
         if params['ByYear']=='T':
-            p_start = p_row['apvm']
-            p_end = p_row['ppvm']
+            p_start = p_row['APVM']
+            p_end = p_row['PPVM']
             #if p_end is NaT, it means the pension is ongoing
             if pd.isnull(p_end): p_end = date.today()
             #get the list of years covered by this entry
@@ -216,15 +215,15 @@ def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
                     if year==p_end.year: nmonths = p_end.month
 
                     received_pension[ind] = 1#ID has received any pension
-                    if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = 1 #ID has received disability pension
+                    if not pd.isna(p_row['TKSYY1']): received_disability_pension[ind] = 1 #ID has received disability pension
 
                     #if year is earlier than the earliest entry in the cpi table, use then index for year 1972
                     if year not in cpi: C = cpi[1972]
                     else: C = cpi[year]
             
-                    if not pd.isna(p_row['ptma']): total_income[ind] += C*nmonths*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): total_income[ind] += C*nmonths*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): total_income[ind] += C*nmonths*p_row['jkma']
+                    if not pd.isna(p_row['PTMA']): total_income[ind] += C*nmonths*p_row['PTMA']
+                    if not pd.isna(p_row['LTMA']): total_income[ind] += C*nmonths*p_row['LTMA']
+                    if not pd.isna(p_row['JKMA']): total_income[ind] += C*nmonths*p_row['JKMA']
 
                     if params['OutputAge']=='T':
                         dob = data.iloc[ind]['date_of_birth']
@@ -249,8 +248,8 @@ def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
                 fu_start = data.iloc[ind]['start_of_followup']
                 dob = data.iloc[ind]['date_of_birth']
 
-                p_start = p_row['apvm']
-                p_end = p_row['ppvm']
+                p_start = p_row['APVM']
+                p_end = p_row['PPVM']
                 if pd.isna(p_end): p_end = fu_end
                     
                 if p_end<fu_start or p_start>fu_end: continue
@@ -270,15 +269,15 @@ def readPension(data,params,cpi,requested_features,ID_set,data_ind_dict):
                     #elif params['ByYear']=='F': ind = data_ind_dict[(ID,fu_start,fu_end)]
 
                     received_pension[ind] = 1#ID has received any pension
-                    if not pd.isna(p_row['tksyy1']): received_disability_pension[ind] = 1 #ID has received disability pension
+                    if not pd.isna(p_row['TKSYY1']): received_disability_pension[ind] = 1 #ID has received disability pension
 
                     #if year is earlier than the earliest entry in the cpi table, use then index for year 1972
                     if year not in cpi: C = cpi[1972]
                     else: C = cpi[year]
             
-                    if not pd.isna(p_row['ptma']): total_income[ind] += C*nmonths*p_row['ptma']
-                    if not pd.isna(p_row['ltma']): total_income[ind] += C*nmonths*p_row['ltma']
-                    if not pd.isna(p_row['jkma']): total_income[ind] += C*nmonths*p_row['jkma']
+                    if not pd.isna(p_row['PTMA']): total_income[ind] += C*nmonths*p_row['PTMA']
+                    if not pd.isna(p_row['LTMA']): total_income[ind] += C*nmonths*p_row['LTMA']
+                    if not pd.isna(p_row['JKMA']): total_income[ind] += C*nmonths*p_row['JKMA']
 
                     if params['OutputAge']=='T':
                         if year==p_start.year: onset_date = p_start
@@ -318,10 +317,10 @@ def readIncome(data,params,requested_features,ID_set,data_ind_dict):
     #total_income = Sum of labor income, pension and social benefits, indexed
     #total_labor_income = Sum of labor income, indexed
     start = time()
-    keep_cols = ['id','vuosi','vuosiansio_indexed']
+    keep_cols = ['FINREGISTRYID','VUOSI','VUOSIANSIO_INDEXED']
     income = pd.read_feather(params['IncomeFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    income = income[income['id'].isin(ID_set)]
+    income = income[income['FINREGISTRYID'].isin(ID_set)]
     print("Income, number or data rows: "+str(len(income)))
     
     #Note that the dataframe 'data' has already been initialized, so depending on the
@@ -333,8 +332,8 @@ def readIncome(data,params,requested_features,ID_set,data_ind_dict):
     if params['OutputAge']=='T': received_labor_income_OnsetAge = [np.nan for i in range(len(data))]
 
     for index,row in income.iterrows():
-        ID = row['id']
-        year = row['vuosi']
+        ID = row['FINREGISTRYID']
+        year = row['VUOSI']
 
         if params['ByYear']=='T':
             key = (ID,year)
@@ -346,7 +345,7 @@ def readIncome(data,params,requested_features,ID_set,data_ind_dict):
             fu_start = data.iloc[ind]['start_of_followup']
             #if year is outside the follow-up for this ID, skip
             if year<fu_start.year or year>fu_end.year: continue
-            income_value = row['vuosiansio_indexed']
+            income_value = row['VUOSIANSIO_INDEXED']
         
             #update the values
             #if params['ByYear']=='T': ind = data_ind_dict[(ID,fu_start,fu_end,year)]
@@ -383,14 +382,14 @@ def readBenefits(data,params,requested_features,ID_set,data_ind_dict):
     #received_other_allowance = REceived any other type of allowance (source: ETK Pension)
     
     start = time()
-    keep_cols = ['id','etuuslaji','alkamispvm','paattymispvm']
+    keep_cols = ['FINREGISTRYID','ETUUSLAJI','ALKAMISPVM','PAATTYMISPVM']
     benefits = pd.read_feather(params['BenefitsFile'],columns=keep_cols)
     #keep only rows corresponding to IDs in samples
-    benefits = benefits[benefits['id'].isin(ID_set)]
+    benefits = benefits[benefits['FINREGISTRYID'].isin(ID_set)]
     print("Benefits, number or data rows: "+str(len(benefits)))
     #convert the dates to datetime
-    benefits['alkamispvm'] = pd.to_datetime(benefits['alkamispvm'])
-    benefits['paattymispvm'] = pd.to_datetime(benefits['paattymispvm'])
+    benefits['ALKAMISPVM'] = pd.to_datetime(benefits['ALKAMISPVM'])
+    benefits['PAATTYMISPVM'] = pd.to_datetime(benefits['PAATTYMISPVM'])
     #Note that the dataframe 'data' has already been initialized, so depending on the
     #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
     #per year.
@@ -412,12 +411,12 @@ def readBenefits(data,params,requested_features,ID_set,data_ind_dict):
         
         
     for index,row in benefits.iterrows():
-        ID = row['id']
-        b_start = row['alkamispvm'] #start date of allowance
-        b_end = row['paattymispvm'] #end date of allowance
+        ID = row['FINREGISTRYID']
+        b_start = row['ALKAMISPVM'] #start date of allowance
+        b_end = row['PAATTYMISPVM'] #end date of allowance
 
         #get the type of the social benefit
-        benefit_type = int(row['etuuslaji'])
+        benefit_type = int(row['ETUUSLAJI'])
         if benefit_type==100 or benefit_type==101 or benefit_type==102 or benefit_type==103:
             #maternity, paternity or parental benefit
             benefit_var = 'received_maternity_paternity_parental_allowance'
@@ -491,17 +490,17 @@ def readSocialAssistance(data,params,cpi,requested_features,ID_set,data_ind_dict
     #total_benefits = sum of social benefits, indexed
     
     start = time()
-    keep_cols = ['TNRO','TILASTOVUOSI','EHKAISEVA_TOIMEENTULOTUKI_EUR','PERUS_TOIMEENTULOTUKI_EUR','TAYD_TOIMEENTULOTUKI_EUR','KUNT_TOIMINTARAHA_EUR','KUNT_MATKAKORVAUS_EUR']
+    keep_cols = ['FINREGISTRYID','TILASTOVUOSI','EHKAISEVA_TOIMEENTULOTUKI_EUR','PERUS_TOIMEENTULOTUKI_EUR','TAYD_TOIMEENTULOTUKI_EUR','KUNT_TOIMINTARAHA_EUR','KUNT_MATKAKORVAUS_EUR']
     #Note that column VARS_TOIMEENTULOTUKI_EUR seems to be sum of all other forms of income support except EHKAISEVA_TOIMEENTULOTUKI_EUR, that is why it is not used to avoid counting some of the income support twice
-    assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';')
+    assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=',')
     #keep only rows corresponding to IDs in samples
-    assistance = assistance[assistance['TNRO'].isin(ID_set)]
+    assistance = assistance[assistance['FINREGISTRYID'].isin(ID_set)]
     print("Social assistance, number or data rows: "+str(len(assistance)))
     sum_cols = list(assistance)
-    sum_cols.remove('TNRO')
+    sum_cols.remove('FINREGISTRYID')
     sum_cols.remove('TILASTOVUOSI') #all columns used to compute sum of all income support
     assistance['tot_income_support'] = assistance[sum_cols].sum(axis=1)
-    assistance = assistance[['TNRO','TILASTOVUOSI','tot_income_support']]
+    assistance = assistance[['FINREGISTRYID','TILASTOVUOSI','tot_income_support']]
 
     #Note that the dataframe 'data' has already been initialized, so depending on the
     #value of params['ByYear'], it either contains one entry per ID, or one entry per ID
@@ -512,7 +511,7 @@ def readSocialAssistance(data,params,cpi,requested_features,ID_set,data_ind_dict
     if params['OutputAge']=='T': received_any_income_support_OnsetAge = [np.nan for i in range(len(data))]
 
     for index,row in assistance.iterrows():
-        ID = row['TNRO']
+        ID = row['FINREGISTRYID']
         year = row['TILASTOVUOSI']
         if params['ByYear']=='F': key = ID
         elif params['ByYear']=='T':
@@ -560,14 +559,14 @@ def readEmigration(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #emigrated = Whether the individual has emigrated; 0=no, 1=yes
     
     start = time()
-    keep_cols = ['FINREGISTRYID','Emigration_date']
+    keep_cols = ['FINREGISTRYID','EMIGRATION_DATE']
     relatives = pd.read_csv(params['RelativesFile'],usecols=keep_cols,sep=',')
-    #keep only rows where Emigration_date is not missing
-    relatives = relatives.loc[~relatives['Emigration_date'].isnull()]
+    #keep only rows where EMIGRATION_DATE is not missing
+    relatives = relatives.loc[~relatives['EMIGRATION_DATE'].isnull()]
     #keep only rows corresponding to IDs in samples
     relatives = relatives[relatives['FINREGISTRYID'].isin(ID_set)]
     #convert date columns to datetime
-    relatives['Emigration_date'] = pd.to_datetime(relatives['Emigration_date'])
+    relatives['EMIGRATION_DATE'] = pd.to_datetime(relatives['EMIGRATION_DATE'])
     
     print("Emigration, number or data rows: "+str(len(relatives)))
 
@@ -577,9 +576,9 @@ def readEmigration(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     for index,row in relatives.iterrows():
         ID = row['FINREGISTRYID']
-        emigration_date = row['Emigration_date']
+        EMIGRATION_DATE = row['EMIGRATION_DATE']
         if params['ByYear']=='T':
-            key = (ID,emigration_date.year)
+            key = (ID,EMIGRATION_DATE.year)
             if key not in data_ind_dict: continue
         elif params['ByYear']=='F': key = ID
 
@@ -588,13 +587,13 @@ def readEmigration(data,params,cpi,requested_features,ID_set,data_ind_dict):
             fu_end = data.iloc[ind]['end_of_followup']
             fu_start = data.iloc[ind]['start_of_followup']
             #skip if emigration date is outside of follow-up for this entry
-            if emigration_date<fu_start or emigration_date>fu_end: continue
+            if EMIGRATION_DATE<fu_start or EMIGRATION_DATE>fu_end: continue
 
             emigrated[ind] = 1
             #check if age at emigration is requested
             if params['OutputAge']=='T':
                 dob = data.iloc[ind]['date_of_birth']
-                onsetAge = getOnsetAge(dob,emigration_date)
+                onsetAge = getOnsetAge(dob,EMIGRATION_DATE)
                 emigrated_onsetAge[ind] = onsetAge
     #add the new columns to data
     data['emigrated'] = emigrated
@@ -614,16 +613,16 @@ def readMaritalStatus(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #married = Whether the individual has married; 0=no, 1=yes
     
     start = time()
-    keep_cols = ['FINREGISTRYID','Current_marital_status','Starting_date','Ending_day']
+    keep_cols = ['FINREGISTRYID','CURRENT_MARITAL_STATUS','START_DATE','END_DATE']
     marriage = pd.read_csv(params['MarriageHistoryFile'],usecols=keep_cols,sep=',')
     #keep only rows corresponding to IDs in samples
     marriage = marriage[marriage['FINREGISTRYID'].isin(ID_set)]
     #keep only rows corresponding to current marital status being either married or divorced,
     #also include registered partnerships
-    marriage = marriage.loc[(marriage['Current_marital_status']==2) | (marriage['Current_marital_status']==4) | (marriage['Current_marital_status']==6) | (marriage['Current_marital_status']==7)]
+    marriage = marriage.loc[(marriage['CURRENT_MARITAL_STATUS']==2) | (marriage['CURRENT_MARITAL_STATUS']==4) | (marriage['CURRENT_MARITAL_STATUS']==6) | (marriage['CURRENT_MARITAL_STATUS']==7)]
     #convert date columns to datetime
-    marriage['Starting_date'] = pd.to_datetime(marriage['Starting_date'])
-    marriage['Ending_day'] = pd.to_datetime(marriage['Ending_day'])
+    marriage['START_DATE'] = pd.to_datetime(marriage['START_DATE'])
+    marriage['END_DATE'] = pd.to_datetime(marriage['END_DATE'])
     
     print("Marriage history, number or data rows: "+str(len(marriage)))
 
@@ -636,11 +635,11 @@ def readMaritalStatus(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
     for index,row in marriage.iterrows():
         ID = row['FINREGISTRYID']
-        m_start = row['Starting_date'] #start date of marriage/reg. partnership
-        m_end = row['Ending_day'] #end date of marriage/reg. partnership
+        m_start = row['START_DATE'] #start date of marriage/reg. partnership
+        m_end = row['END_DATE'] #end date of marriage/reg. partnership
 
         #get the current marital status
-        m_status = int(row['Current_marital_status'])
+        m_status = int(row['CURRENT_MARITAL_STATUS'])
         marriage_date = m_start
         if m_status==4 or m_status==7: divorce_date = m_end
         else: divorce_date = None
@@ -736,12 +735,12 @@ def readPedigree(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #children = Whether the individual has children.
     
     start = time()
-    keep_cols = ['ID','MOTHER_ID','FATHER_ID','Birth_Date']
-    pedigree = pd.read_csv(params['PedigreeFile'],usecols=keep_cols,sep='\t')
+    keep_cols = ['FINREGISTRYID','MOTHER_ID','FATHER_ID','BIRTH_DATE']
+    pedigree = pd.read_csv(params['PedigreeFile'],usecols=keep_cols,sep=',')
     #keep only rows corresponding to IDs in samples
     pedigree = pedigree[(pedigree['MOTHER_ID'].isin(ID_set)) | (pedigree['FATHER_ID'].isin(ID_set))]
     #convert date columns to datetime
-    pedigree['Birth_Date'] = pd.to_datetime(pedigree['Birth_Date'])
+    pedigree['BIRTH_DATE'] = pd.to_datetime(pedigree['BIRTH_DATE'])
     #convert nans to empty strings
     pedigree.fillna('',inplace=True)
     
@@ -762,7 +761,7 @@ def readPedigree(data,params,cpi,requested_features,ID_set,data_ind_dict):
         parent_IDs = []
         if father_ID in ID_set: parent_IDs.append(father_ID)
         if mother_ID in ID_set: parent_IDs.append(mother_ID)
-        child_dob = row['Birth_Date']
+        child_dob = row['BIRTH_DATE']
         
         for ID in parent_IDs:
             if params['ByYear']=='F': key = ID
@@ -1036,15 +1035,15 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #first social assistance register
-        keep_cols = ['TNRO','TILASTOVUOSI','SOSIOEKOASEMA']
+        keep_cols = ['FINREGISTRYID','TILASTOVUOSI','SOSIOEKOASEMA']
         assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';',dtype={'SOSIOEKOASEMA':str})
         #keep only rows corresponding to IDs with missing SES
-        assistance = assistance[assistance['TNRO'].isin(nan_IDs)]
+        assistance = assistance[assistance['FINREGISTRYID'].isin(nan_IDs)]
         #keep only rows with non-missing SOSIOEKOASEMA
         assistance = assistance.loc[~pd.isnull(assistance['SOSIOEKOASEMA'])]
         #print('SOSIOEKOASEMA from social assistance read in')
         for index,row in assistance.iterrows():
-            ID = row['TNRO']
+            ID = row['FINREGISTRYID']
             year = row['TILASTOVUOSI']
             if params['ByYear']=='F': key = ID
             elif params['ByYear']=='T':
@@ -1100,16 +1099,16 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     print(len(data.loc[data['ses']=='ses_missing']['FINREGISTRYID']))
     if len(nan_IDs)>0:
         #read birth register
-        keep_cols = ['AITI_TNRO','TILASTOVUOSI','SOSEKO']
+        keep_cols = ['AITI_FINREGISTRYID','TILASTOVUOSI','SOSEKO']
         birth = pd.read_feather(params['BirthFile'],columns=keep_cols)
         #keep only rows corresponding to IDs with missing SES
-        birth = birth[birth['AITI_TNRO'].isin(nan_IDs)]
+        birth = birth[birth['AITI_FINREGISTRYID'].isin(nan_IDs)]
         #keep only rows with non-missing SOSEKO
         birth = birth.loc[~pd.isnull(birth['SOSEKO'])]
         birth['SOSEKO'] = birth['SOSEKO'].astype(str)
         #print('SOSEKO from birth registry read in')
         for index,row in birth.iterrows():
-            ID = row['AITI_TNRO']
+            ID = row['AITI_FINREGISTRYID']
             year = row['TILASTOVUOSI']
             if params['ByYear']=='F': key = ID
             elif params['ByYear']=='T':
@@ -1341,10 +1340,10 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #birth_status_NA = Information missing about birth status of the child (SYNTYMATILATUNNUS)
 
     start = time()
-    usecols = ['AITI_TNRO','TILASTOVUOSI','AITI_IKA','KESKENMENOJA','KESKEYTYKSIA','ULKOPUOLISIA','KUOLLEENASYNT','TUPAKOINTITUNNUS','IVF','TROMBOOSIPROF','ANEMIA','SOKERI_PATOL','EI_LIEVITYSTA','EI_LIEVITYS_TIETOA','KAYNNISTYS','EDISTAMINEN','PUHKAISU','OKSITOSIINI','PROSTAGLANDIINI','ISTUKANIRROITUS','KAAVINTA','OMPELU','GBS_PROFYLAKSIA','AIDIN_ANTIBIOOTTIHOITO','VERENSIIRTO','YMPARILEIKKAUKSEN_AVAUS','KOHDUNPOISTO','EMBOLISAATIO','SYNNYTYSTAPATUNNUS','ETINEN','ISTIRTO','RKOURIS','HARTIADYSTOKIA','ASFYKSIA','SYNTYMATILATUNNUS']
+    usecols = ['AITI_FINREGISTRYID','TILASTOVUOSI','AITI_IKA','KESKENMENOJA','KESKEYTYKSIA','ULKOPUOLISIA','KUOLLEENASYNT','TUPAKOINTITUNNUS','IVF','TROMBOOSIPROF','ANEMIA','SOKERI_PATOL','EI_LIEVITYSTA','EI_LIEVITYS_TIETOA','KAYNNISTYS','EDISTAMINEN','PUHKAISU','OKSITOSIINI','PROSTAGLANDIINI','ISTUKANIRROITUS','KAAVINTA','OMPELU','GBS_PROFYLAKSIA','AIDIN_ANTIBIOOTTIHOITO','VERENSIIRTO','YMPARILEIKKAUKSEN_AVAUS','KOHDUNPOISTO','EMBOLISAATIO','SYNNYTYSTAPATUNNUS','ETINEN','ISTIRTO','RKOURIS','HARTIADYSTOKIA','ASFYKSIA','SYNTYMATILATUNNUS']
     birth = pd.read_feather(params['BirthFile'],columns=usecols)
     #keep only rows corresponding to IDs in samples
-    birth = birth[birth['AITI_TNRO'].isin(ID_set)]
+    birth = birth[birth['AITI_FINREGISTRYID'].isin(ID_set)]
 
     #rename columns to match the output variable names
     rename_col_dict = {'KESKENMENOJA':'miscarriages','KESKEYTYKSIA':'terminated_pregnancies','ULKOPUOLISIA':'ectopic_pregnancies','KUOLLEENASYNT':'stillborns','IVF':'invitro_fertilization','TROMBOOSIPROF':'thrombosis_prophylaxis','ANEMIA':'anemia','SOKERI_PATOL':'glucose_test_abnormal','EI_LIEVITYSTA':'no_analgesics','EI_LIEVITYS_TIETOA':'analgesics_info_missing','KAYNNISTYS':'initiated_labor','EDISTAMINEN':'promoted_labor','PUHKAISU':'puncture','OKSITOSIINI':'oxytocin','PROSTAGLANDIINI':'prostaglandin','ISTUKANIRROITUS':'extraction_of_placenta','KAAVINTA':'uterine_scraping','OMPELU':'suturing','GBS_PROFYLAKSIA':'prophylaxis','AIDIN_ANTIBIOOTTIHOITO':'mother_antibiotics','VERENSIIRTO':'blood_transfusion','YMPARILEIKKAUKSEN_AVAUS':'circumcision','KOHDUNPOISTO':'hysterectomy','EMBOLISAATIO':'embolisation','ETINEN':'placenta_praevia','ISTIRTO':'ablatio_placentae','RKOURIS':'eclampsia','HARTIADYSTOKIA':'shoulder_dystocia','ASFYKSIA':'asphyxia'}
@@ -1390,11 +1389,11 @@ def readBirth(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #initialize the new columns
     new_cols = {}
     for cname in birth.columns:
-        if cname not in ['AITI_TNRO','TILASTOVUOSI','AITI_IKA']: new_cols[cname] = [0 for i in range(len(data))]
+        if cname not in ['AITI_FINREGISTRYID','TILASTOVUOSI','AITI_IKA']: new_cols[cname] = [0 for i in range(len(data))]
     if params['OutputAge']=='T': birth_onsetAge = [np.nan for i in range(len(data))]
 
     for index,row in birth.iterrows():
-        ID = row['AITI_TNRO']
+        ID = row['AITI_FINREGISTRYID']
         year = row['TILASTOVUOSI']
         if params['ByYear']=='T':
             key = (ID,year)
@@ -1475,10 +1474,10 @@ def readLongterm(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #long_term_care_duration = Total treatment days for a calendar year (KVHP)
 
     start = time()
-    usecols = ['TNRO','VUOSI','PALA','TUSYY1','PITK','KVHP']
+    usecols = ['FINREGISTRYID','VUOSI','PALA','TUSYY1','PITK','KVHP']
     longterm = pd.read_csv(params['SocialHilmoFile'],sep=',',usecols=usecols,dtype={'PALA':str,'TUSYY1':str},encoding = 'ISO-8859-1')
     #keep only rows corresponding to IDs in samples
-    longterm = longterm[longterm['TNRO'].isin(ID_set)]
+    longterm = longterm[longterm['FINREGISTRYID'].isin(ID_set)]
     #preprocess TUSYY1 to harmonize the codes used
     longterm['TUSYY1'] = longterm['TUSYY1'].str.replace('"','',regex=False)
     longterm['TUSYY1'] = longterm['TUSYY1'].str.replace(',','',regex=False)
@@ -1517,11 +1516,11 @@ def readLongterm(data,params,cpi,requested_features,ID_set,data_ind_dict):
     #initialize the new columns
     new_cols = {}
     for cname in longterm.columns:
-        if cname not in ['TNRO','VUOSI']: new_cols[cname] = [0 for i in range(len(data))]
+        if cname not in ['FINREGISTRYID','VUOSI']: new_cols[cname] = [0 for i in range(len(data))]
     if params['OutputAge']=='T': longtermcare_onsetAge = [np.nan for i in range(len(data))]
 
     for index,row in longterm.iterrows():
-        ID = row['TNRO']
+        ID = row['FINREGISTRYID']
         year = row['VUOSI']
         if params['ByYear']=='T':
             key = (ID,year)
@@ -1536,7 +1535,6 @@ def readLongterm(data,params,cpi,requested_features,ID_set,data_ind_dict):
 
             if params['OutputAge']=='T': dob = data.iloc[ind]['date_of_birth']
             for cname in new_cols:
-                #durations of the long-term care periods are summed up
                 if cname=='long_term_care_duration':
                     new_cols['long_term_care_duration'][ind] += row['long_term_care_duration']
                 else:
