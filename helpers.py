@@ -1036,7 +1036,7 @@ def readSES(data,params,cpi,requested_features,ID_set,data_ind_dict):
     if len(nan_IDs)>0:
         #first social assistance register
         keep_cols = ['FINREGISTRYID','TILASTOVUOSI','SOSIOEKOASEMA']
-        assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=';',dtype={'SOSIOEKOASEMA':str})
+        assistance = pd.read_csv(params['SocialAssistanceFile'],usecols=keep_cols,sep=',',dtype={'SOSIOEKOASEMA':str})
         #keep only rows corresponding to IDs with missing SES
         assistance = assistance[assistance['FINREGISTRYID'].isin(nan_IDs)]
         #keep only rows with non-missing SOSIOEKOASEMA
