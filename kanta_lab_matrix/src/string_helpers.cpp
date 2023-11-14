@@ -1,7 +1,16 @@
 #include "header.h"
-template <typename Out>
 
-/*/
+/**
+ * @brief Check if last character of string correct if not appends it
+*/
+void check_and_fix_last_char(std::string &str, char last_char) {
+    if(str.back() != last_char) {
+        str = concat_string(std::vector<std::string>({str, std::string(1, last_char)}));
+    }
+}
+
+template <typename Out>
+/**
     Splits a string based on a given delimiter. Copied from https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string
 */
 void split(const std::string &s, 
@@ -70,19 +79,22 @@ std::string remove_chars(std::string str,
 }
 
 std::string get_omop_identifier(std::string lab_id,
-                                std::string lab_abbreviation,
+                                std::string lab_abbrv,
                                 std::string lab_unit,
-                                std::string sep = std::string(" ")) {
+                                std::string sep) {
 
     // Currently identifying the OMOP concept by the lab ID and abbreviation.
-    std::vector<std::string> omop_identifier_vec = {lab_id, lab_abbreviation, lab_unit};
+    lab_id = concat_string(std::vector<std::string>({"\"", lab_id,  "\""}));
+    lab_abbrv = concat_string(std::vector<std::string>({"\"", lab_abbrv,  "\""}));
+
+    std::vector<std::string> omop_identifier_vec = {lab_id, lab_abbrv, lab_unit};
     std::string omop_identifier = concat_string(omop_identifier_vec, sep);
 
     return(omop_identifier);
 } 
 
 /** 
- * @brief Splits a string based on a given delimiter
+ * @brief Splits a string based on a given delimiter ignoring any delimiter inside "".
  * 
  * @param input string to split
  * @param delimiter delimiter to split on
@@ -113,4 +125,8 @@ std::vector<std::string> splitString(const std::string &input,
   tokens.push_back(token); // Add the last token
   
   return tokens;
+}
+
+void add_quotation(std::string &str) {
+    if(str != "NA") str = concat_string(std::vector<std::string>({"\"", str,  "\""}));
 }
