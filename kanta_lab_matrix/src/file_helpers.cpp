@@ -72,48 +72,66 @@ void check_in_open(std::ifstream &file_stream,
     }
 }
 
-/**
- * @brief Learns the separator of a file
- * 
- * @param config_file File to be read
- * 
- * @return const char* Separator
-*/
-const char* find_separator(std::ifstream &config_file) {
-    const char* sep;
+char find_delim(std::string file_path){
+    char delim;
 
-    std::string config_line;
+    // Opening file
+    std::ifstream in_file; in_file.open(file_path); check_in_open(in_file, file_path);
+    std::string line;
 
-    int line = 0;
-    while(std::getline(config_file, config_line)) {
+    int n_lines = 0;
+    int tabs_found = 0;
+    int semicolons_found = 0;
+    int commas_found = 0;
+
+    while(std::getline(in_file, line)) {
         // Ignore lines that start with #
-        if(config_line[0] != '#') {
-            if(line == 0) {
-                line++;
-                if(config_line.find("\t") != std::string::npos) {
-                    sep = "\t";
-                    break;
-                } else if(config_line.find(";") != std::string::npos) {
-                    sep = ";";
-                    break;
-                } else if(config_line.find(",") != std::string::npos) {
-                    sep = ";";
-                    break;
-                } else {
-                    std::cout << "Could not find separator from config file. Tried `\t`, `,` and `;`" << std::endl;
-                    std::cout << "If you are using \t as a separator make sure you are not accidentally using multiple spaces as separators." << std::endl;
-                    exit(EXIT_FAILURE);
-                }
+
+        if(line[0] != '#') {
+            if(line.find('\t') != std::string::npos) tabs_found++;
+            if(line.find(';') != std::string::npos) semicolons_found++;
+            if(line.find(',') != std::string::npos) commas_found++;
+        } 
+        n_lines++;
+        if(n_lines == 1000) break;
+    }
+
+    if((tabs_found > semicolons_found) & (tabs_found > commas_found)) {
+        delim = '\t';
+    } else if((semicolons_found > tabs_found) & (semicolons_found > commas_found)) {
+        delim = ';';
+    } else {
+        delim = ',';
+    }
+    in_file.close();
+
+    in_file.open(file_path); check_in_open(in_file, file_path);
+    n_lines = 0;
+    int first_line = 1;
+    long unsigned int n_elems_per_line = 0;
+
+    while(std::getline(in_file, line)) {
+        // Ignore lines that start with #
+
+        if(line[0] != '#') {
+            std::vector<std::string> line_arr = splitString(line, delim);
+            if(first_line == 1) {
+                n_elems_per_line = line_arr.size();
+                first_line = 0;
             } else {
-                if(config_line.find(sep) != std::string::npos) {
-                    continue;
-                } else {
-                    std::cout << "Config file has inconsistent separators. Tried " << sep << std::endl;
-                    std::cout << "If you are using \t as a separator make sure you are not accidentally using multiple spaces as separators." << std::endl;
+                if(line_arr.size() != n_elems_per_line) {
+                    std::cout << "Error: inconsistent number of elements in line " << n_lines << std::endl;
+                    std::cout << "Using delimiter " << delim << std::endl;
+                    std::cout << "Based on first line expected " << n_elems_per_line << " elements, got " << line_arr.size() << std::endl;
+                    std::cout << "Current line: " << line << std::endl;
                     exit(EXIT_FAILURE);
                 }
             }
-        } 
+        }
+        n_lines++;
+        if(n_lines == 1000) break;
     }
-    return(sep);
+    in_file.close();
+
+    return(delim);
 }
