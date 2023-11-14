@@ -20,9 +20,7 @@ int main(int argc, char *argv[]) {
   
   // List of sumstats we are interested in
   std::vector<std::string> relevant_sumstats = read_relevant_sumstats_from_config(configs);
-  write_relevant_sumstats_files(indvs_omop_sumstats, relevant_sumstats, relevant_omops, configs["ResPath"]);
-  
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  
-  std::cout << "Time took overall = " << std::chrono::duration_cast<std::chrono::hours> (end - begin).count() << "[h]" << std::endl;
+  write_relevant_sumstats_files(indvs_omop_sumstats, relevant_sumstats, relevant_omops, configs["ResDirPath"], configs["ResFilePrefix"]);
+
+  write_end_run_summary(begin);
 }
