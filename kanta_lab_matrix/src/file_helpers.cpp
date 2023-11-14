@@ -131,6 +131,7 @@ char find_delim(std::string file_path){
         n_lines++;
         if(n_lines == 1000) break;
     }
+    in_file.close();
 
     return(delim);
 }

@@ -160,15 +160,18 @@ void read_indvs_omop_sumstats_from_config(std::unordered_map<std::string, std::s
     int i = 0;
     for (auto const &indv : indvs_omop_sumstats) {
         std::cout << indv.first;
+        int j = 0;
         for(auto const &omop : indv.second) {
-            std::cout << " " << omop.first;
+            int k = 0;
+            std::cout << omop.first << " : ";
             for(auto const &sumstat : omop.second) {
-                std::cout << " " << sumstat.first << " " << sumstat.second;
+                std::cout << " -> " << sumstat.first << " : " << sumstat.second << " ";
+                k++; if(k == 5) break;
             }
+            std::cout << endl;
+            j++; if(j == 5) break;
         }
-        i++;
-        if (i == 5)
-            break;
+        i++; if (i == 5) break;
     }
 }
 

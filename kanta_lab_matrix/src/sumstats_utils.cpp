@@ -213,13 +213,13 @@ void read_indvs_omops_sumstats(std::string indvs_omops_sumstats_path,
     std::ifstream indvs_omops_sumstats_file;
     indvs_omops_sumstats_file.open(indvs_omops_sumstats_path);
     check_in_open(indvs_omops_sumstats_file, indvs_omops_sumstats_path);
-    std::string line;
-
     char delim = find_delim(indvs_omops_sumstats_path);
 
     int first_line = 1;
+    std::string line;
+    std::vector<std::string> col_names;
+
     while(std::getline(indvs_omops_sumstats_file, line)) {
-        std::vector<std::string> col_names;
         if (first_line == 1) {
             col_names = splitString(line, delim);
             first_line = 0;
@@ -228,15 +228,17 @@ void read_indvs_omops_sumstats(std::string indvs_omops_sumstats_path,
 
         std::vector<std::string> line_vec(splitString(line, delim));
         std::string finregid = line_vec[0];
-        std::string omop_identifier = line_vec[1];
+        std::string omop_id = line_vec[1];
+        std::string lab_unit = line_vec[2];
 
+        std::string omop_identifier = concat_string(std::vector<std::string>({omop_id, lab_unit}), std::string("_"));
         // If not information for relevant indvs and omops passed, using all information
-        if(relevant_indvs.empty() || (relevant_indvs.find("finregid") != relevant_indvs.end())) {
+        if(relevant_indvs.empty() || (relevant_indvs.find(finregid) != relevant_indvs.end())) {
             if(relevant_omops.empty() || (relevant_omops.find(omop_identifier) != relevant_omops.end())) {
                 std::unordered_map<std::string, std::string> sumstats;
                 // Iterate over all sumstats
-                for(long unsigned int elem_idx = 0; elem_idx <= col_names.size()-2; elem_idx++) {
-                    sumstats[col_names[elem_idx+2]] = line_vec[elem_idx];
+                for(long unsigned int elem_idx = 3; elem_idx <= (col_names.size()-1); elem_idx++) {
+                    sumstats[col_names[elem_idx]] = line_vec[elem_idx];
                 }
                 indvs_omop_sumstats[finregid][omop_identifier] = sumstats;
             }
@@ -383,21 +385,22 @@ void write_relevant_sumstats_files( std::unordered_map<std::string, std::unorder
         // Each row is a single individual
         for(auto indv_omop_sumstats: indvs_omop_sumstats) {
             std::string finregid = indv_omop_sumstats.first;
-            std::cout << finregid << ",";
+            res_file << finregid << ",";
 
             // All data of this individual
             std::unordered_map<std::string, std::unordered_map<std::string, std::string>> indv_data = indv_omop_sumstats.second;
 
             // Writing to file needs to be ordered the same for everyone as in relevant_omops
+            // A relevant omop in this case is a combination of OMOP ID and lab unit
             for(auto crnt_omop: relevant_omops) {
-                // If we have data for this omop get the relevant sumstat
                 if(indv_data.find(crnt_omop) != indv_data.end()) {
-                    std::string crnt_sumstat = indv_data[crnt_omop][sumstat];
-                    std::cout << crnt_sumstat << ",";
+                // If we have data for this omop get the relevant sumstat
+                    res_file << indv_data[crnt_omop][sumstat] << ",";
                 } else {
-                    std::cout << "NA" << ",";
+                    res_file << "NA" << ",";
                 }
             }
+            res_file << endl;
         }
         //Closing file
         res_file.close();
