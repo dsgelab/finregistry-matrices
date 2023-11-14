@@ -1,7 +1,7 @@
 #include "header.h"
 
-
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     // Reading config file
@@ -21,19 +21,15 @@ int main(int argc, char *argv[]) {
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>> indvs_omops_values;
 
     // Open "KantaLabFile"
-    std::ifstream lab_file;
-    lab_file.open(configs["KantaLabFile"]);
-    check_in_open(lab_file, configs["KantaLabFile"]);
+    std::ifstream lab_file; lab_file.open(configs["KantaLabFile"]); check_in_open(lab_file, configs["KantaLabFile"]);
 
     // Reading
+    cout << "Starting reading lab file" << endl;
     std::string line;
     int first_line = 1; // Indicates header line
     int n_lines = 0;
-    while(std::getline(lab_file, line)) {
-        if (first_line == 1) {
-            first_line = 0;
-            continue;
-        }
+    while (std::getline(lab_file, line)) {
+        if (first_line == 1) { first_line = 0; continue; }
 
         std::vector<std::string> line_vec(splitString(line, ','));
         std::string finregid = line_vec[0];
@@ -52,61 +48,33 @@ int main(int argc, char *argv[]) {
         date lab_date(from_simple_string(lab_date_time));
 
         // Interested in this OMOP ID and unit combo
-        if(relevant_omops.find(omop_identifier) != relevant_omops.end()) {
+        if (relevant_omops.find(omop_identifier) != relevant_omops.end()) {
             // Interested in this individual
-            if(relevant_indvs.find(finregid) != relevant_indvs.end()) {
+            if (relevant_indvs.find(finregid) != relevant_indvs.end()) {
                 // Measurement date relevant for this individual
                 date start_date = std::get<0>(relevant_indvs[finregid]);
                 date end_date = std::get<1>(relevant_indvs[finregid]);
-                if(lab_date >= start_date && lab_date <= end_date) {
+                if (lab_date >= start_date && lab_date <= end_date) {
                     // Add value to vector of omop values of individual
                     indvs_omops_values[finregid][omop_identifier].push_back(std::stod(lab_value));
                 }
-            // Interested in all data for all individuals
-            } 
-        } else if(relevant_indvs.empty()) {
-                // Add value to vector of omop values of individual
-                indvs_omops_values[finregid][omop_identifier].push_back(std::stod(lab_value));
-        }
-
-        // Write every 10000000 lines
-        n_lines++;
-        if(n_lines % 10000000 == 0) {
-            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-            std::cout << "Lines read = " << n_lines << " Time took = " << std::chrono::duration_cast<std::chrono::minutes>(end - begin).count() << "[min]" << std::endl;
-        }
-    }
-
-    // print first 5 entries in indvs_omops_values
-    std::cout << "Printing first 5 entries in indvs_omops_values" << std::endl;
-    int i = 0;
-    for(auto const& indv_data : indvs_omops_values) {
-        std::cout << indv_data.first << std::endl;
-        int j = 0;
-        for(auto const& indv_omop_data: indv_data.second) {
-            std::cout << indv_omop_data.first << std::endl;
-            int k = 0;
-            for(auto const& omop_value: indv_omop_data.second) {
-                std::cout << omop_value << std::endl;
-                k++;
-                if(k == 5) break;
+                // Interested in all data for all individuals
             }
-            j++;
-            if(j == 5) break;
         }
-        i++;
-        if(i == 5) break;
+        else if (relevant_indvs.empty()) {
+            // Add value to vector of omop values of individual
+            indvs_omops_values[finregid][omop_identifier].push_back(std::stod(lab_value));
+        }
+
+        n_lines++; write_line_update(n_lines, begin);
     }
 
     std::cout << "Starting summary stats" << std::endl;
     // Writing mean, median, min, max, sd, first quantile, third quantile, n_elems
-    write_indvs_omops_sumstats(indvs_omops_values, configs["ResPath"]);
+    write_indvs_omops_sumstats(indvs_omops_values, configs);
 
     // close lab file
     lab_file.close();
-    
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    std::cout << "Time took overall = " << std::chrono::duration_cast<std::chrono::hours> (end - begin).count() << "[h]" << std::endl;
+    write_end_run_summary(begin);
 }
