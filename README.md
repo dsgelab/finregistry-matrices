@@ -9,7 +9,7 @@ Scripts to generate endpoint, drug, and socioeconomic-demographic matrices in Fi
 - [Creating matrices from endpoints](#endpt)
 - [Creating matrices from drug purchases](#drug)
 - [Creating matrices from other data sources](#other)
-- [Creating matrices from kanta lab data](#kanta)
+- [Creating matrices from kanta lab data](#lab)
 
 <a id='intro'></a>
 ## Introduction
