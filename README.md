@@ -316,9 +316,8 @@ Output matrices are formatted similarly as to what is described above for the dr
 - Checks that all input files can be read before starting preprocessing.
 - Reports a warning in the log file if requested age ranges are outside the coverage of any of the registries (NOT IMPLEMENTED YET, USER NEEDS TO CHECK THEMSELVES!).
 
-<a id='lab'></a>
 # Creating matrices from kanta lab data
-
+<a id='lab'></a>
 ## Usage
 
 All C++ files are provided so that you can change/adapt/fix and compile them yourselves as well as already in the form of ready executables. Do note that you will likely need to compile them locally since some of the code is running with `boost` that is not available in epouta.
@@ -383,7 +382,5 @@ You can add a minimum number the OMOP concepts should occur in the file. I actua
 
 where each combination of OMOP concept and lab unit has to appear at least 100 times to be considered relevant. The file will be written to `<ResDirPath>/<ResFilePrefix>_omop_sumstats.csv`. I will later add some script to further process these statistics, for now you find ready-made lists at `/data/projects/project_kdetrois/omop_sumstats/`
 
-
-[Go to top of page](#top)
 
 [Go to top of page](#top)
